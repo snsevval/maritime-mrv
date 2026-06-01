@@ -416,7 +416,7 @@ export default function EmisyonRaporlariPage() {
                   {[["hfo_mt","HFO"], ["lfo_mt","LFO"], ["mdo_mt","MDO"], ["mgo_mt","MGO"], ["lng_mt","LNG"], ["other_mt","Diğer"]].map(([k, label]) => (
                     <div key={k} className="bg-gray-50 rounded-lg p-2.5">
                       <p className="text-gray-500 text-xs">{label}</p>
-                      <p className="font-semibold">{fc[k] ?? 0} ton</p>
+                      <p className="font-semibold">{String(fc[k] ?? 0)} ton</p>
                     </div>
                   ))}
                 </div>
