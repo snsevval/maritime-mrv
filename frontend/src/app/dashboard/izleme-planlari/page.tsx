@@ -132,7 +132,7 @@ export default function IzlemePlanlariPage() {
             <thead>
               <tr>
                 <th className="table-header">Gemi</th>
-                <th className="table-header">Versiyon</th>
+                <th className="table-header">Sürüm</th>
                 <th className="table-header">Durum</th>
                 <th className="table-header">Emisyon Kaynakları</th>
                 <th className="table-header">Oluşturulma</th>
@@ -150,7 +150,9 @@ export default function IzlemePlanlariPage() {
                     <span className="badge bg-gray-100 text-gray-700">v{plan.version}</span>
                   </td>
                   <td className="table-cell">
-                    <span className="badge bg-green-100 text-green-700">{plan.status}</span>
+                    <span className="badge bg-green-100 text-green-700">
+                      {plan.status === "active" ? "Aktif" : plan.status === "draft" ? "Taslak" : plan.status === "archived" ? "Arşivlendi" : plan.status}
+                    </span>
                   </td>
                   <td className="table-cell text-gray-500">{plan.emission_sources.length} kaynak</td>
                   <td className="table-cell">{formatDate(plan.created_at)}</td>
@@ -253,7 +255,7 @@ export default function IzlemePlanlariPage() {
                 <span className="ml-2 font-medium">{selected.ship?.name}</span>
               </div>
               <div>
-                <span className="text-gray-500">Versiyon:</span>
+                <span className="text-gray-500">Sürüm:</span>
                 <span className="ml-2 font-medium">v{selected.version}</span>
               </div>
             </div>
@@ -296,7 +298,7 @@ export default function IzlemePlanlariPage() {
             )}
 
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Revizyon Geçmişi</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">Düzeltme Geçmişi</h3>
               <div className="space-y-2">
                 {selected.revision_log.map((log, i) => (
                   <div key={i} className="flex items-start gap-3 text-sm">

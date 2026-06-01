@@ -13,6 +13,22 @@ const EMPTY_FORM = {
   ship_type: "", gross_tonnage: "",
 };
 
+const GEMI_TURU_TR: Record<string, string> = {
+  "Bulk Carrier": "Dökme Yük Gemisi",
+  "Container Ship": "Konteyner Gemisi",
+  "Tanker": "Tanker",
+  "Ro-Ro": "Ro-Ro",
+  "Passenger Ship": "Yolcu Gemisi",
+  "General Cargo": "Genel Kargo",
+  "Gas Carrier": "Gaz Taşıyıcı",
+  "Chemical Tanker": "Kimyasal Tanker",
+};
+
+function gemTuruCevir(t?: string | null) {
+  if (!t) return "-";
+  return GEMI_TURU_TR[t] ?? t;
+}
+
 export default function GemilerPage() {
   const [ships, setShips] = useState<Ship[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,9 +149,9 @@ export default function GemilerPage() {
                 <th className="table-header">IMO No</th>
                 <th className="table-header">Gemi Adı</th>
                 <th className="table-header">Bayrak</th>
-                <th className="table-header">Tür</th>
+                <th className="table-header">Gemi Türü</th>
                 <th className="table-header">Kayıt Limanı</th>
-                <th className="table-header">GT</th>
+                <th className="table-header">Brüt Tonaj</th>
                 <th className="table-header">Kayıt Tarihi</th>
                 {isCompany && <th className="table-header">İşlemler</th>}
               </tr>
@@ -146,7 +162,7 @@ export default function GemilerPage() {
                   <td className="table-cell font-mono font-medium">{ship.imo_number}</td>
                   <td className="table-cell font-medium text-navy-700">{ship.name}</td>
                   <td className="table-cell">{ship.flag}</td>
-                  <td className="table-cell">{ship.ship_type || "-"}</td>
+                  <td className="table-cell">{gemTuruCevir(ship.ship_type)}</td>
                   <td className="table-cell">{ship.registry_port || "-"}</td>
                   <td className="table-cell">{ship.gross_tonnage?.toLocaleString("tr-TR") || "-"}</td>
                   <td className="table-cell">{formatDate(ship.created_at)}</td>
@@ -213,10 +229,10 @@ export default function GemilerPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Gemi Türü</label>
-              <input className="input-field" value={form.ship_type} onChange={set("ship_type")} placeholder="Konteyner" />
+              <input className="input-field" value={form.ship_type} onChange={set("ship_type")} placeholder="Konteyner Gemisi" />
             </div>
             <div>
-              <label className="label">Gross Tonaj</label>
+              <label className="label">Brüt Tonaj</label>
               <input className="input-field" type="number" value={form.gross_tonnage} onChange={set("gross_tonnage")} placeholder="50000" />
             </div>
           </div>

@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Ship, FileText, ClipboardList, CheckSquare, FileCheck,
   BarChart2, LogOut, ChevronRight, Anchor,
 } from "lucide-react";
 import { clearAuth, getCurrentUser } from "@/lib/auth";
-import type { UserRole } from "@/types";
+import type { User, UserRole } from "@/types";
 import { ROLE_LABELS } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +66,11 @@ const NAV_ITEMS: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const user = getCurrentUser();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
 
   function handleLogout() {
     clearAuth();
