@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, ForeignKey, DateTime, JSON, Text, Boolean, Enum as SAEnum,
+    Column, Integer, String, ForeignKey, DateTime, JSON, Text, Boolean, Float, Enum as SAEnum,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -136,3 +136,30 @@ class ComplianceDocument(Base):
 
     ship = relationship("Ship", back_populates="compliance_documents")
     issuer = relationship("User", back_populates="compliance_documents_issued")
+
+
+class ShipReport(Base):
+    __tablename__ = "ship_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    imo_number = Column(String(20), nullable=False, index=True)
+    ship_name = Column(String(255), nullable=False)
+    ship_type = Column(String(100))
+    company = Column(String(255))
+    reporting_period = Column(Integer, nullable=False)
+    co2_emissions = Column(Float)
+    co2eq_emissions = Column(Float)
+    report_coverage = Column(String(50), default="Full Reporting Period")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DatasetVersion(Base):
+    __tablename__ = "dataset_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reporting_period = Column(Integer, nullable=False)
+    version = Column(Integer, nullable=False)
+    generation_date = Column(DateTime, nullable=False)
+    file_name = Column(String(255))
+    file_url = Column(String(512))
+    created_at = Column(DateTime, default=datetime.utcnow)

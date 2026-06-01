@@ -236,6 +236,56 @@ class ComplianceDocumentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Ship Report ───────────────────────────────────────────────────────────────
+
+class ShipReportCreate(BaseModel):
+    imo_number: str
+    ship_name: str
+    ship_type: Optional[str] = None
+    company: Optional[str] = None
+    reporting_period: int
+    co2_emissions: Optional[float] = None
+    co2eq_emissions: Optional[float] = None
+    report_coverage: Optional[str] = "Full Reporting Period"
+
+
+class ShipReportResponse(BaseModel):
+    id: int
+    imo_number: str
+    ship_name: str
+    ship_type: Optional[str] = None
+    company: Optional[str] = None
+    reporting_period: int
+    co2_emissions: Optional[float] = None
+    co2eq_emissions: Optional[float] = None
+    report_coverage: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ShipReportListResponse(BaseModel):
+    items: list[ShipReportResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+# ── Dataset Version ────────────────────────────────────────────────────────────
+
+class DatasetVersionResponse(BaseModel):
+    id: int
+    reporting_period: int
+    version: int
+    generation_date: datetime
+    file_name: Optional[str] = None
+    file_url: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):

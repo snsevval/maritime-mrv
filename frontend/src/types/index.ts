@@ -100,6 +100,37 @@ export interface DashboardStats {
   total_co2_mt: number;
 }
 
+export interface ShipReport {
+  id: number;
+  imo_number: string;
+  ship_name: string;
+  ship_type?: string;
+  company?: string;
+  reporting_period: number;
+  co2_emissions?: number;
+  co2eq_emissions?: number;
+  report_coverage?: string;
+  created_at: string;
+}
+
+export interface ShipReportList {
+  items: ShipReport[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface DatasetVersion {
+  id: number;
+  reporting_period: number;
+  version: number;
+  generation_date: string;
+  file_name?: string;
+  file_url?: string;
+  created_at: string;
+}
+
 export interface AuthToken {
   access_token: string;
   token_type: string;

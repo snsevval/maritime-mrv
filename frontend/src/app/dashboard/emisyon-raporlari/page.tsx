@@ -1,430 +1,636 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Eye, Pencil, Trash2, Send, FileText, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
-import { reportsApi, shipsApi, getErrorMessage } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
-import { formatDate } from "@/lib/utils";
-import type { EmissionReport, Ship } from "@/types";
-import { STATUS_LABELS, STATUS_COLORS } from "@/types";
+import { shipReportsApi, getErrorMessage } from "@/lib/api";
+import type { ShipReport, ShipReportList, DatasetVersion } from "@/types";
+import {
+  ChevronDown, ChevronLeft, ChevronRight,
+  Download, Eye, RotateCcw, History, Search,
+} from "lucide-react";
 
-const EMPTY_FORM = {
-  ship_id: "",
-  reporting_period_start: "",
-  reporting_period_end: "",
-  departure_port: "",
-  arrival_port: "",
-  distance_nm: "",
-  sea_days: "",
-  cargo_mt: "",
-  hfo_mt: "0", lfo_mt: "0", mdo_mt: "0", mgo_mt: "0", lng_mt: "0", other_mt: "0",
-  co2_mt: "0", ch4_mt: "0", n2o_mt: "0", total_co2eq_mt: "0",
-  eeoi: "", cii_rating: "",
+// ── constants ──────────────────────────────────────────────────────────────────
+
+const SHIP_TYPES = [
+  "Bulk Carrier", "Container Ship", "Tanker", "Ro-Ro",
+  "Passenger Ship", "General Cargo", "Gas Carrier", "Chemical Tanker",
+];
+
+const REPORTING_PERIODS = ["2024", "2023", "2022", "2021"];
+
+const EMPTY_FILTERS = {
+  imo_number: "",
+  ship_name: "",
+  reporting_period: "",
+  ship_type: "",
+  report_coverage: "",
 };
 
+type SortKey = keyof ShipReport;
+type SortDir = "asc" | "desc";
+
+// ── component ──────────────────────────────────────────────────────────────────
+
 export default function EmisyonRaporlariPage() {
-  const [reports, setReports] = useState<EmissionReport[]>([]);
-  const [ships, setShips] = useState<Ship[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [modal, setModal] = useState<"create" | "edit" | "view" | null>(null);
-  const [selected, setSelected] = useState<EmissionReport | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const user = getCurrentUser();
-  const isCompany = user?.role === "shipping_company";
+  const [data, setData] = useState<ShipReportList>({
+    items: [], total: 0, page: 1, page_size: 10, total_pages: 1,
+  });
+  const [versions, setVersions] = useState<DatasetVersion[]>([]);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [activeFilters, setActiveFilters] = useState(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<SortKey>("ship_name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [loading, setLoading] = useState(false);
+  const [versionsLoading, setVersionsLoading] = useState(false);
 
-  const load = useCallback(() => {
+  const [detailModal, setDetailModal] = useState<ShipReport | null>(null);
+  const [versionModal, setVersionModal] = useState<DatasetVersion | null>(null);
+
+  const [openActionId, setOpenActionId] = useState<number | null>(null);
+  const [openVersionId, setOpenVersionId] = useState<number | null>(null);
+
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // ── data loading ────────────────────────────────────────────────────────────
+
+  const loadReports = useCallback(async () => {
     setLoading(true);
-    const tasks = [reportsApi.list(), ...(isCompany ? [shipsApi.list()] : [])];
-    Promise.all(tasks)
-      .then(([rr, sr]) => {
-        setReports(rr.data as EmissionReport[]);
-        if (sr) setShips(sr.data as Ship[]);
-      })
-      .catch((e) => setError(getErrorMessage(e)))
-      .finally(() => setLoading(false));
-  }, [isCompany]);
-
-  useEffect(() => { load(); }, [load]);
-
-  function openCreate() {
-    setForm({ ...EMPTY_FORM, ship_id: ships[0]?.id.toString() || "" });
-    setFormError("");
-    setSelected(null);
-    setModal("create");
-  }
-
-  function openEdit(r: EmissionReport) {
-    const fc = r.fuel_consumption as Record<string, unknown>;
-    const gh = r.ghg_emissions as Record<string, unknown>;
-    const vd = r.voyage_data as Record<string, unknown>;
-    setForm({
-      ship_id: r.ship_id.toString(),
-      reporting_period_start: r.reporting_period_start.split("T")[0],
-      reporting_period_end: r.reporting_period_end.split("T")[0],
-      departure_port: String(vd.departure_port || ""),
-      arrival_port: String(vd.arrival_port || ""),
-      distance_nm: String(vd.distance_nm || ""),
-      sea_days: String(vd.sea_days || ""),
-      cargo_mt: String(vd.cargo_mt || ""),
-      hfo_mt: String(fc.hfo_mt || 0),
-      lfo_mt: String(fc.lfo_mt || 0),
-      mdo_mt: String(fc.mdo_mt || 0),
-      mgo_mt: String(fc.mgo_mt || 0),
-      lng_mt: String(fc.lng_mt || 0),
-      other_mt: String(fc.other_mt || 0),
-      co2_mt: String(gh.co2_mt || 0),
-      ch4_mt: String(gh.ch4_mt || 0),
-      n2o_mt: String(gh.n2o_mt || 0),
-      total_co2eq_mt: String(gh.total_co2eq_mt || 0),
-      eeoi: String(gh.eeoi || ""),
-      cii_rating: String(gh.cii_rating || ""),
-    });
-    setFormError("");
-    setSelected(r);
-    setModal("edit");
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    setFormError("");
-    const n = (v: string) => (v ? parseFloat(v) : undefined);
-    const payload = {
-      ship_id: parseInt(form.ship_id),
-      reporting_period_start: new Date(form.reporting_period_start).toISOString(),
-      reporting_period_end: new Date(form.reporting_period_end).toISOString(),
-      voyage_data: {
-        departure_port: form.departure_port,
-        arrival_port: form.arrival_port,
-        distance_nm: n(form.distance_nm),
-        sea_days: n(form.sea_days),
-        cargo_mt: n(form.cargo_mt),
-      },
-      fuel_consumption: {
-        hfo_mt: n(form.hfo_mt) || 0, lfo_mt: n(form.lfo_mt) || 0,
-        mdo_mt: n(form.mdo_mt) || 0, mgo_mt: n(form.mgo_mt) || 0,
-        lng_mt: n(form.lng_mt) || 0, other_mt: n(form.other_mt) || 0,
-      },
-      ghg_emissions: {
-        co2_mt: n(form.co2_mt) || 0, ch4_mt: n(form.ch4_mt) || 0,
-        n2o_mt: n(form.n2o_mt) || 0, total_co2eq_mt: n(form.total_co2eq_mt) || 0,
-        eeoi: n(form.eeoi), cii_rating: form.cii_rating || undefined,
-      },
-    };
     try {
-      if (modal === "create") {
-        await reportsApi.create(payload);
-      } else if (selected) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { ship_id: _, ...updatePayload } = payload;
-        await reportsApi.update(selected.id, updatePayload);
-      }
-      setModal(null);
-      load();
+      const params: Record<string, string | number> = { page, page_size: 10 };
+      if (activeFilters.imo_number)     params.imo_number      = activeFilters.imo_number;
+      if (activeFilters.ship_name)      params.ship_name       = activeFilters.ship_name;
+      if (activeFilters.reporting_period) params.reporting_period = parseInt(activeFilters.reporting_period);
+      if (activeFilters.ship_type)      params.ship_type       = activeFilters.ship_type;
+      if (activeFilters.report_coverage) params.report_coverage = activeFilters.report_coverage;
+      const res = await shipReportsApi.list(params);
+      setData(res.data as ShipReportList);
     } catch (e) {
-      setFormError(getErrorMessage(e));
+      console.error(getErrorMessage(e));
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  }
+  }, [page, activeFilters]);
 
-  async function handleSubmit(id: number) {
-    if (!confirm("Bu raporu doğrulamaya göndermek istiyor musunuz?")) return;
+  const loadVersions = useCallback(async () => {
+    setVersionsLoading(true);
     try {
-      await reportsApi.submit(id);
-      load();
+      const res = await shipReportsApi.datasetVersions();
+      setVersions(res.data as DatasetVersion[]);
     } catch (e) {
-      setError(getErrorMessage(e));
+      console.error(getErrorMessage(e));
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadReports(); }, [loadReports]);
+  useEffect(() => { loadVersions(); }, [loadVersions]);
+
+  // ── sort (client-side within page) ─────────────────────────────────────────
+
+  const sorted = [...data.items].sort((a, b) => {
+    const av = a[sortKey] ?? "";
+    const bv = b[sortKey] ?? "";
+    if (av < bv) return sortDir === "asc" ? -1 : 1;
+    if (av > bv) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  // ── filter actions ──────────────────────────────────────────────────────────
+
+  function handleSearch() {
+    setPage(1);
+    setActiveFilters({ ...filters });
+  }
+
+  function handleReset() {
+    setFilters(EMPTY_FILTERS);
+    setActiveFilters(EMPTY_FILTERS);
+    setPage(1);
+  }
+
+  function handleNameInput(value: string) {
+    setFilters((f) => ({ ...f, ship_name: value }));
+    if (value.length > 1) {
+      const q = value.toLowerCase();
+      const suggestions = [...new Set(
+        data.items.map((r) => r.ship_name).filter((n) => n.toLowerCase().includes(q))
+      )].slice(0, 6);
+      setNameSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setShowSuggestions(false);
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Bu raporu silmek istediğinizden emin misiniz?")) return;
-    try {
-      await reportsApi.delete(id);
-      load();
-    } catch (e) {
-      setError(getErrorMessage(e));
+  // ── download ────────────────────────────────────────────────────────────────
+
+  function handleDownload(v: DatasetVersion) {
+    if (v.file_url) {
+      window.open(v.file_url, "_blank");
+    } else {
+      const name = v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`;
+      alert(`"${name}" dosyası indiriliyor…`);
     }
   }
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  // ── helpers ─────────────────────────────────────────────────────────────────
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <span className="ml-1 text-gray-300">↕</span>;
+    return <span className="ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
+
+  const displayStart = data.total === 0 ? 0 : (page - 1) * data.page_size + 1;
+  const displayEnd   = Math.min(page * data.page_size, data.total);
+
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const fmtNum = (n?: number) =>
+    n != null ? n.toLocaleString("tr-TR", { maximumFractionDigits: 2 }) : "—";
+
+  // ── render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Emisyon Raporları"
-        subtitle="Gemi emisyon raporlarını yönetin"
-        action={
-          isCompany ? (
-            <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Yeni Rapor Oluştur
-            </button>
-          ) : undefined
-        }
+        subtitle="Gemi Emisyon Raporlama Veritabanı"
       />
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-6 text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> {error}
-        </div>
-      )}
+      {/* ── Bilgilendirme Alanı ─────────────────────────────────────── */}
+      <div className="card">
+        <h3 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide">
+          Bilgilendirme
+        </h3>
+        <ul className="space-y-2 text-sm text-gray-600 list-disc list-inside leading-relaxed">
+          <li>
+            Emisyon raporlama kuralları IMO DCS (Veri Toplama Sistemi) ve EU MRV yönetmeliği
+            çerçevesinde uygulanmaktadır.
+          </li>
+          <li>
+            MRV sistemi; deniz taşımacılığı emisyonlarının izlenmesi, raporlanması ve
+            doğrulanması süreçlerini kapsamaktadır.
+          </li>
+          <li>
+            CO₂ raporlama yükümlülükleri 5.000 GT ve üzeri gemiler için geçerlidir; yıllık
+            olarak yetkili kurumlara iletilmelidir.
+          </li>
+          <li>
+            Yıllık raporlama dönemi 1 Ocak – 31 Aralık arasındaki seyir verilerini kapsar ve
+            raporlar bir sonraki yılın 30 Nisan tarihine kadar sunulur.
+          </li>
+        </ul>
+      </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-4 border-navy-600 border-t-transparent rounded-full animate-spin" />
+      {/* ── Arama ve Filtre Paneli ──────────────────────────────────── */}
+      <div className="card">
+        <h3 className="font-semibold text-gray-800 mb-4">Arama ve Filtrele</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          <div>
+            <label className="label">IMO Number</label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="IMO numarası girin"
+              value={filters.imo_number}
+              onChange={(e) => setFilters((f) => ({ ...f, imo_number: e.target.value }))}
+            />
+          </div>
+
+          <div className="relative">
+            <label className="label">Ship Name</label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="Gemi adı ara…"
+              value={filters.ship_name}
+              onChange={(e) => handleNameInput(e.target.value)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            />
+            {showSuggestions && (
+              <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1">
+                {nameSuggestions.map((s) => (
+                  <button
+                    key={s}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    onMouseDown={() => {
+                      setFilters((f) => ({ ...f, ship_name: s }));
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Reporting Period</label>
+            <select
+              className="input-field"
+              value={filters.reporting_period}
+              onChange={(e) => setFilters((f) => ({ ...f, reporting_period: e.target.value }))}
+            >
+              <option value="">Tümü</option>
+              {REPORTING_PERIODS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Ship Type</label>
+            <select
+              className="input-field"
+              value={filters.ship_type}
+              onChange={(e) => setFilters((f) => ({ ...f, ship_type: e.target.value }))}
+            >
+              <option value="">Tümü</option>
+              {SHIP_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Report Coverage</label>
+            <select
+              className="input-field"
+              value={filters.report_coverage}
+              onChange={(e) => setFilters((f) => ({ ...f, report_coverage: e.target.value }))}
+            >
+              <option value="">Tümü</option>
+              <option value="Full Reporting Period">Full Reporting Period</option>
+              <option value="Partial Reporting Period">Partial Reporting Period</option>
+            </select>
+          </div>
         </div>
-      ) : reports.length === 0 ? (
-        <div className="card text-center py-16 text-gray-400">
-          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Henüz emisyon raporu oluşturulmamış</p>
+
+        <div className="flex gap-3 mt-5">
+          <button onClick={handleSearch} className="btn-primary flex items-center gap-2">
+            <Search className="w-4 h-4" /> Search
+          </button>
+          <button onClick={handleReset} className="btn-secondary flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Reset
+          </button>
         </div>
-      ) : (
-        <div className="card p-0 overflow-hidden">
+      </div>
+
+      {/* ── Gemi Emisyon Raporları Tablosu ──────────────────────────── */}
+      <div className="card p-0 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-800">Gemi Emisyon Raporları</h3>
+        </div>
+
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
-                <th className="table-header">Gemi</th>
-                <th className="table-header">Raporlama Dönemi</th>
-                <th className="table-header">Durum</th>
-                <th className="table-header">CO₂ (ton)</th>
-                <th className="table-header">Gönderim Tarihi</th>
-                <th className="table-header">İşlemler</th>
+                <th className="table-header w-28">Actions</th>
+                {(
+                  [
+                    ["imo_number",     "IMO"],
+                    ["ship_name",      "Name"],
+                    ["ship_type",      "Ship Type"],
+                    ["company",        "Company"],
+                    ["reporting_period","RP"],
+                    ["co2_emissions",  "Total CO₂ Emissions (t)"],
+                    ["co2eq_emissions","Total CO₂eq Emissions (t)"],
+                  ] as [SortKey, string][]
+                ).map(([col, label]) => (
+                  <th
+                    key={col}
+                    className="table-header cursor-pointer select-none hover:bg-gray-100 transition-colors"
+                    onClick={() => toggleSort(col)}
+                  >
+                    {label}
+                    <SortIcon col={col} />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {reports.map((r) => {
-                const ghg = r.ghg_emissions as Record<string, unknown>;
-                return (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="table-cell font-medium text-navy-700">
-                      {r.ship?.name || `Gemi #${r.ship_id}`}
-                    </td>
-                    <td className="table-cell text-sm">
-                      {formatDate(r.reporting_period_start)} — {formatDate(r.reporting_period_end)}
-                    </td>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-14">
+                    <div className="w-7 h-7 border-4 border-navy-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  </td>
+                </tr>
+              ) : sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-14 text-gray-400 text-sm">
+                    Kayıt bulunamadı
+                  </td>
+                </tr>
+              ) : (
+                sorted.map((r) => (
+                  <tr
+                    key={r.id}
+                    className="hover:bg-blue-50 transition-colors"
+                  >
+                    {/* Actions dropdown */}
                     <td className="table-cell">
-                      <span className={`badge ${STATUS_COLORS[r.status]}`}>
-                        {STATUS_LABELS[r.status]}
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      {typeof ghg.co2_mt === "number" ? ghg.co2_mt.toLocaleString("tr-TR") : "-"}
-                    </td>
-                    <td className="table-cell">{r.submitted_at ? formatDate(r.submitted_at) : "-"}</td>
-                    <td className="table-cell">
-                      <div className="flex items-center gap-1.5">
+                      <div className="relative inline-block">
                         <button
-                          onClick={() => { setSelected(r); setModal("view"); }}
-                          className="p-1.5 text-gray-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg"
-                          title="Görüntüle"
+                          className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1"
+                          onClick={() =>
+                            setOpenActionId(openActionId === r.id ? null : r.id)
+                          }
                         >
-                          <Eye className="w-4 h-4" />
+                          Actions <ChevronDown className="w-3 h-3" />
                         </button>
-                        {isCompany && r.status === "draft" && (
-                          <>
+                        {openActionId === r.id && (
+                          <div className="absolute z-30 left-0 top-8 w-36 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <button
-                              onClick={() => openEdit(r)}
-                              className="p-1.5 text-gray-400 hover:text-navy-700 hover:bg-navy-50 rounded-lg"
-                              title="Düzenle"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                              onClick={() => {
+                                setDetailModal(r);
+                                setOpenActionId(null);
+                              }}
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Eye className="w-3.5 h-3.5" /> View
                             </button>
-                            <button
-                              onClick={() => handleSubmit(r.id)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                              title="Gönder"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(r.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                              title="Sil"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
+                          </div>
                         )}
                       </div>
                     </td>
+                    <td className="table-cell font-mono text-xs">{r.imo_number}</td>
+                    <td className="table-cell font-medium text-navy-800">{r.ship_name}</td>
+                    <td className="table-cell text-xs text-gray-500">{r.ship_type ?? "—"}</td>
+                    <td className="table-cell text-xs text-gray-500">{r.company ?? "—"}</td>
+                    <td className="table-cell text-center font-semibold">{r.reporting_period}</td>
+                    <td className="table-cell text-right tabular-nums">{fmtNum(r.co2_emissions)}</td>
+                    <td className="table-cell text-right tabular-nums">{fmtNum(r.co2eq_emissions)}</td>
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      )}
 
-      {/* Create / Edit Modal */}
-      <Modal
-        open={modal === "create" || modal === "edit"}
-        onClose={() => setModal(null)}
-        title={modal === "create" ? "Yeni Emisyon Raporu" : "Raporu Düzenle"}
-        size="xl"
-      >
-        {formError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 mb-4 text-sm">
-            {formError}
-          </div>
-        )}
-        <div className="space-y-6">
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Genel Bilgiler</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {modal === "create" && (
-                <div className="col-span-2">
-                  <label className="label">Gemi *</label>
-                  <select className="input-field" value={form.ship_id} onChange={set("ship_id")}>
-                    {ships.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.imo_number})</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="label">Dönem Başlangıcı *</label>
-                <input type="date" className="input-field" value={form.reporting_period_start} onChange={set("reporting_period_start")} />
-              </div>
-              <div>
-                <label className="label">Dönem Bitişi *</label>
-                <input type="date" className="input-field" value={form.reporting_period_end} onChange={set("reporting_period_end")} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Sefer Verisi</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Kalkış Limanı</label>
-                <input className="input-field" value={form.departure_port} onChange={set("departure_port")} placeholder="İstanbul" />
-              </div>
-              <div>
-                <label className="label">Varış Limanı</label>
-                <input className="input-field" value={form.arrival_port} onChange={set("arrival_port")} placeholder="Hamburg" />
-              </div>
-              <div>
-                <label className="label">Mesafe (deniz mili)</label>
-                <input type="number" className="input-field" value={form.distance_nm} onChange={set("distance_nm")} />
-              </div>
-              <div>
-                <label className="label">Denizde Geçen Süre (gün)</label>
-                <input type="number" className="input-field" value={form.sea_days} onChange={set("sea_days")} />
-              </div>
-              <div>
-                <label className="label">Yük (ton)</label>
-                <input type="number" className="input-field" value={form.cargo_mt} onChange={set("cargo_mt")} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Yakıt Tüketimi (ton)</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {[["hfo_mt","HFO"], ["lfo_mt","LFO"], ["mdo_mt","MDO"], ["mgo_mt","MGO"], ["lng_mt","LNG"], ["other_mt","Diğer"]].map(([k, label]) => (
-                <div key={k}>
-                  <label className="label">{label}</label>
-                  <input type="number" step="0.01" className="input-field" value={(form as Record<string, string>)[k]} onChange={set(k)} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">GHG Emisyonları</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {[["co2_mt","CO₂ (ton)"], ["ch4_mt","CH₄ (ton)"], ["n2o_mt","N₂O (ton)"], ["total_co2eq_mt","Toplam CO₂e (ton)"]].map(([k, label]) => (
-                <div key={k}>
-                  <label className="label">{label}</label>
-                  <input type="number" step="0.01" className="input-field" value={(form as Record<string, string>)[k]} onChange={set(k)} />
-                </div>
-              ))}
-              <div>
-                <label className="label">EEOI</label>
-                <input type="number" step="0.01" className="input-field" value={form.eeoi} onChange={set("eeoi")} />
-              </div>
-              <div>
-                <label className="label">CII Notu</label>
-                <select className="input-field" value={form.cii_rating} onChange={(e) => setForm((f) => ({ ...f, cii_rating: e.target.value }))}>
-                  <option value="">Seçiniz</option>
-                  {["A","B","C","D","E"].map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-            <button onClick={() => setModal(null)} className="btn-secondary">İptal</button>
-            <button onClick={handleSave} disabled={saving} className="btn-primary">
-              {saving ? "Kaydediliyor..." : "Kaydet"}
+        {/* ── Sayfalama ─────────────────────────────────────────────── */}
+        <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
+              onClick={() => setPage(1)}
+              disabled={page <= 1}
+              title="İlk sayfa"
+            >
+              «
+            </button>
+            <button
+              className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="px-3 py-1 bg-navy-700 text-white rounded text-sm font-medium min-w-[2.5rem] text-center">
+              {page}
+            </span>
+            <button
+              className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
+              onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
+              disabled={page >= data.total_pages}
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
+              onClick={() => setPage(data.total_pages)}
+              disabled={page >= data.total_pages}
+              title="Son sayfa"
+            >
+              »
+            </button>
+            <button
+              className="btn-secondary px-2 py-1 text-xs flex items-center gap-1 ml-2"
+              onClick={loadReports}
+              title="Yenile"
+            >
+              <RotateCcw className="w-3 h-3" /> Refresh
             </button>
           </div>
+          <div className="text-sm text-gray-500 text-right">
+            <span>
+              Page{" "}
+              <span className="font-medium text-gray-700">{page}</span>
+              {" "}of {data.total_pages.toLocaleString()}
+            </span>
+            <span className="ml-5">
+              Displaying{" "}
+              <span className="font-medium text-gray-700">
+                {displayStart} – {displayEnd}
+              </span>
+              {" "}of {data.total.toLocaleString()}
+            </span>
+          </div>
         </div>
+      </div>
+
+      {/* ── Dosya ve Versiyon Tablosu ───────────────────────────────── */}
+      <div className="card p-0 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-800">Dataset Versions</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="table-header w-36">Actions</th>
+                <th className="table-header">Reporting Period</th>
+                <th className="table-header">Version</th>
+                <th className="table-header">Generation Date</th>
+                <th className="table-header">File</th>
+              </tr>
+            </thead>
+            <tbody>
+              {versionsLoading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10">
+                    <div className="w-7 h-7 border-4 border-navy-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  </td>
+                </tr>
+              ) : versions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10 text-gray-400 text-sm">
+                    Kayıt bulunamadı
+                  </td>
+                </tr>
+              ) : (
+                versions.map((v) => (
+                  <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                    {/* File actions dropdown */}
+                    <td className="table-cell">
+                      <div className="relative inline-block">
+                        <button
+                          className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1"
+                          onClick={() =>
+                            setOpenVersionId(openVersionId === v.id ? null : v.id)
+                          }
+                        >
+                          Actions <ChevronDown className="w-3 h-3" />
+                        </button>
+                        {openVersionId === v.id && (
+                          <div className="absolute z-30 left-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg">
+                            <button
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                              onClick={() => {
+                                handleDownload(v);
+                                setOpenVersionId(null);
+                              }}
+                            >
+                              <Download className="w-3.5 h-3.5" /> Download
+                            </button>
+                            <button
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                              onClick={() => {
+                                setVersionModal(v);
+                                setOpenVersionId(null);
+                              }}
+                            >
+                              <History className="w-3.5 h-3.5" /> View Previous Versions
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="table-cell font-semibold">{v.reporting_period}</td>
+                    <td className="table-cell">{v.version}</td>
+                    <td className="table-cell">{fmtDate(v.generation_date)}</td>
+                    <td className="table-cell">
+                      <span className="text-xs font-mono text-navy-700">
+                        {v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Gemi Detay Modalı ───────────────────────────────────────── */}
+      <Modal
+        open={detailModal !== null}
+        onClose={() => setDetailModal(null)}
+        title="Gemi Emisyon Raporu Detayı"
+        size="lg"
+      >
+        {detailModal && (
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div>
+              <dt className="text-gray-500 mb-0.5">IMO Number</dt>
+              <dd className="font-semibold font-mono">{detailModal.imo_number}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Ship Name</dt>
+              <dd className="font-semibold">{detailModal.ship_name}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Ship Type</dt>
+              <dd>{detailModal.ship_type ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Company</dt>
+              <dd>{detailModal.company ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Reporting Period</dt>
+              <dd className="font-semibold">{detailModal.reporting_period}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Report Coverage</dt>
+              <dd>{detailModal.report_coverage ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Total CO₂ Emissions</dt>
+              <dd className="font-semibold text-red-700">
+                {fmtNum(detailModal.co2_emissions)} t
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Total CO₂eq Emissions</dt>
+              <dd className="font-semibold text-orange-700">
+                {fmtNum(detailModal.co2eq_emissions)} t
+              </dd>
+            </div>
+          </dl>
+        )}
       </Modal>
 
-      {/* View Modal */}
+      {/* ── Versiyon Geçmişi Modalı ─────────────────────────────────── */}
       <Modal
-        open={modal === "view"}
-        onClose={() => setModal(null)}
-        title={`Emisyon Raporu — ${selected?.ship?.name || ""}`}
-        size="xl"
+        open={versionModal !== null}
+        onClose={() => setVersionModal(null)}
+        title={
+          versionModal
+            ? `Version History — ${versionModal.reporting_period}`
+            : "Version History"
+        }
+        size="lg"
       >
-        {selected && (() => {
-          const vd = selected.voyage_data as Record<string, unknown>;
-          const fc = selected.fuel_consumption as Record<string, unknown>;
-          const gh = selected.ghg_emissions as Record<string, unknown>;
-          return (
-            <div className="space-y-6 text-sm">
-              <div className="flex items-center gap-3">
-                <span className={`badge ${STATUS_COLORS[selected.status]}`}>
-                  {STATUS_LABELS[selected.status]}
-                </span>
-                <span className="text-gray-500">
-                  {formatDate(selected.reporting_period_start)} — {formatDate(selected.reporting_period_end)}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold mb-2">Sefer Verisi</h3>
-                  <dl className="space-y-1.5">
-                    <div className="flex justify-between"><dt className="text-gray-500">Kalkış:</dt><dd>{String(vd.departure_port || "-")}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">Varış:</dt><dd>{String(vd.arrival_port || "-")}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">Mesafe:</dt><dd>{vd.distance_nm ? `${vd.distance_nm} nm` : "-"}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">Denizde Gün:</dt><dd>{String(vd.sea_days || "-")}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">Yük:</dt><dd>{vd.cargo_mt ? `${vd.cargo_mt} ton` : "-"}</dd></div>
-                  </dl>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">GHG Emisyonları</h3>
-                  <dl className="space-y-1.5">
-                    <div className="flex justify-between"><dt className="text-gray-500">CO₂:</dt><dd>{typeof gh.co2_mt === "number" ? `${gh.co2_mt.toLocaleString("tr-TR")} ton` : "-"}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">CH₄:</dt><dd>{typeof gh.ch4_mt === "number" ? `${gh.ch4_mt} ton` : "-"}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">N₂O:</dt><dd>{typeof gh.n2o_mt === "number" ? `${gh.n2o_mt} ton` : "-"}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">Toplam CO₂e:</dt><dd className="font-semibold">{typeof gh.total_co2eq_mt === "number" ? `${gh.total_co2eq_mt.toLocaleString("tr-TR")} ton` : "-"}</dd></div>
-                    <div className="flex justify-between"><dt className="text-gray-500">CII Notu:</dt><dd>{String(gh.cii_rating || "-")}</dd></div>
-                  </dl>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Yakıt Tüketimi</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {[["hfo_mt","HFO"], ["lfo_mt","LFO"], ["mdo_mt","MDO"], ["mgo_mt","MGO"], ["lng_mt","LNG"], ["other_mt","Diğer"]].map(([k, label]) => (
-                    <div key={k} className="bg-gray-50 rounded-lg p-2.5">
-                      <p className="text-gray-500 text-xs">{label}</p>
-                      <p className="font-semibold">{String(fc[k] ?? 0)} ton</p>
-                    </div>
+        {versionModal && (
+          <div>
+            <p className="text-sm text-gray-500 mb-4">
+              {versionModal.reporting_period} dönemine ait tüm versiyon geçmişi.
+            </p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="table-header">Version</th>
+                  <th className="table-header">Generation Date</th>
+                  <th className="table-header">Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {versions
+                  .filter((v) => v.reporting_period === versionModal.reporting_period)
+                  .sort((a, b) => b.version - a.version)
+                  .map((v) => (
+                    <tr key={v.id} className="hover:bg-gray-50">
+                      <td className="table-cell font-semibold">{v.version}</td>
+                      <td className="table-cell">{fmtDate(v.generation_date)}</td>
+                      <td className="table-cell">
+                        <button
+                          className="text-navy-700 hover:underline flex items-center gap-1 text-xs"
+                          onClick={() => handleDownload(v)}
+                        >
+                          <Download className="w-3 h-3" />
+                          {v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`}
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
+
+      {/* overlay to close dropdowns on outside click */}
+      {(openActionId !== null || openVersionId !== null) && (
+        <div
+          className="fixed inset-0 z-20"
+          onClick={() => {
+            setOpenActionId(null);
+            setOpenVersionId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

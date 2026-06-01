@@ -97,6 +97,13 @@ export const docsApi = {
   create: (data: Record<string, unknown>) => api.post("/api/compliance-documents", data),
 };
 
+// Ship Reports & Dataset Versions
+export const shipReportsApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get("/api/ship-reports", { params }),
+  datasetVersions: () => api.get("/api/dataset-versions"),
+};
+
 // Stats
 export const statsApi = {
   get: () => api.get("/api/stats"),
