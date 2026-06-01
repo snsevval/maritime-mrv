@@ -42,10 +42,10 @@ export function getErrorMessage(error: unknown): string {
 // Auth
 export const authApi = {
   login: (email: string, password: string) =>
-    api.post("/api/auth/login", { email, password }),
+    api.post("/api/v1/auth/login", { email, password }),
   register: (data: Record<string, unknown>) =>
-    api.post("/api/auth/register", data),
-  me: () => api.get("/api/auth/me"),
+    api.post("/api/v1/auth/register", data),
+  me: () => api.get("/api/v1/auth/me"),
 };
 
 // Ships

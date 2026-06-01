@@ -7,7 +7,7 @@ from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token
 from app.auth.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.config import settings
 
-router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
+router = APIRouter(prefix="/api/v1/auth", tags=["Kimlik Doğrulama"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

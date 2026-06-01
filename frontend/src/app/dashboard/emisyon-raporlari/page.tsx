@@ -9,16 +9,22 @@ import {
   Download, Eye, RotateCcw, History, Search,
 } from "lucide-react";
 
-// ── constants ──────────────────────────────────────────────────────────────────
+// ── sabitler ───────────────────────────────────────────────────────────────────
 
-const SHIP_TYPES = [
-  "Bulk Carrier", "Container Ship", "Tanker", "Ro-Ro",
-  "Passenger Ship", "General Cargo", "Gas Carrier", "Chemical Tanker",
+const GEMI_TURLERI: { deger: string; etiket: string }[] = [
+  { deger: "Bulk Carrier",     etiket: "Dökme Yük Gemisi" },
+  { deger: "Container Ship",   etiket: "Konteyner Gemisi" },
+  { deger: "Tanker",           etiket: "Tanker" },
+  { deger: "Ro-Ro",            etiket: "Ro-Ro" },
+  { deger: "Passenger Ship",   etiket: "Yolcu Gemisi" },
+  { deger: "General Cargo",    etiket: "Genel Kargo" },
+  { deger: "Gas Carrier",      etiket: "Gaz Taşıyıcı" },
+  { deger: "Chemical Tanker",  etiket: "Kimyasal Tanker" },
 ];
 
-const REPORTING_PERIODS = ["2024", "2023", "2022", "2021"];
+const RAPORLAMA_DONEM = ["2024", "2023", "2022", "2021"];
 
-const EMPTY_FILTERS = {
+const BOS_FILTRE = {
   imo_number: "",
   ship_name: "",
   reporting_period: "",
@@ -29,68 +35,68 @@ const EMPTY_FILTERS = {
 type SortKey = keyof ShipReport;
 type SortDir = "asc" | "desc";
 
-// ── component ──────────────────────────────────────────────────────────────────
+// ── bileşen ────────────────────────────────────────────────────────────────────
 
 export default function EmisyonRaporlariPage() {
   const [data, setData] = useState<ShipReportList>({
     items: [], total: 0, page: 1, page_size: 10, total_pages: 1,
   });
-  const [versions, setVersions] = useState<DatasetVersion[]>([]);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [activeFilters, setActiveFilters] = useState(EMPTY_FILTERS);
-  const [page, setPage] = useState(1);
+  const [surumler, setSurumler] = useState<DatasetVersion[]>([]);
+  const [filtre, setFiltre] = useState(BOS_FILTRE);
+  const [aktifFiltre, setAktifFiltre] = useState(BOS_FILTRE);
+  const [sayfa, setSayfa] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("ship_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [loading, setLoading] = useState(false);
-  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [yukleniyor, setYukleniyor] = useState(false);
+  const [surumYukleniyor, setSurumYukleniyor] = useState(false);
 
-  const [detailModal, setDetailModal] = useState<ShipReport | null>(null);
-  const [versionModal, setVersionModal] = useState<DatasetVersion | null>(null);
+  const [detayModal, setDetayModal] = useState<ShipReport | null>(null);
+  const [surumModal, setSurumModal] = useState<DatasetVersion | null>(null);
 
-  const [openActionId, setOpenActionId] = useState<number | null>(null);
-  const [openVersionId, setOpenVersionId] = useState<number | null>(null);
+  const [acikIslemId, setAcikIslemId] = useState<number | null>(null);
+  const [acikSurumId, setAcikSurumId] = useState<number | null>(null);
 
-  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [adOneri, setAdOneri] = useState<string[]>([]);
+  const [oneriGoster, setOneriGoster] = useState(false);
 
-  // ── data loading ────────────────────────────────────────────────────────────
+  // ── veri yükleme ────────────────────────────────────────────────────────────
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
+  const raporlariYukle = useCallback(async () => {
+    setYukleniyor(true);
     try {
-      const params: Record<string, string | number> = { page, page_size: 10 };
-      if (activeFilters.imo_number)     params.imo_number      = activeFilters.imo_number;
-      if (activeFilters.ship_name)      params.ship_name       = activeFilters.ship_name;
-      if (activeFilters.reporting_period) params.reporting_period = parseInt(activeFilters.reporting_period);
-      if (activeFilters.ship_type)      params.ship_type       = activeFilters.ship_type;
-      if (activeFilters.report_coverage) params.report_coverage = activeFilters.report_coverage;
+      const params: Record<string, string | number> = { page: sayfa, page_size: 10 };
+      if (aktifFiltre.imo_number)       params.imo_number       = aktifFiltre.imo_number;
+      if (aktifFiltre.ship_name)        params.ship_name        = aktifFiltre.ship_name;
+      if (aktifFiltre.reporting_period) params.reporting_period = parseInt(aktifFiltre.reporting_period);
+      if (aktifFiltre.ship_type)        params.ship_type        = aktifFiltre.ship_type;
+      if (aktifFiltre.report_coverage)  params.report_coverage  = aktifFiltre.report_coverage;
       const res = await shipReportsApi.list(params);
       setData(res.data as ShipReportList);
     } catch (e) {
       console.error(getErrorMessage(e));
     } finally {
-      setLoading(false);
+      setYukleniyor(false);
     }
-  }, [page, activeFilters]);
+  }, [sayfa, aktifFiltre]);
 
-  const loadVersions = useCallback(async () => {
-    setVersionsLoading(true);
+  const surumleriYukle = useCallback(async () => {
+    setSurumYukleniyor(true);
     try {
       const res = await shipReportsApi.datasetVersions();
-      setVersions(res.data as DatasetVersion[]);
+      setSurumler(res.data as DatasetVersion[]);
     } catch (e) {
       console.error(getErrorMessage(e));
     } finally {
-      setVersionsLoading(false);
+      setSurumYukleniyor(false);
     }
   }, []);
 
-  useEffect(() => { loadReports(); }, [loadReports]);
-  useEffect(() => { loadVersions(); }, [loadVersions]);
+  useEffect(() => { raporlariYukle(); }, [raporlariYukle]);
+  useEffect(() => { surumleriYukle(); }, [surumleriYukle]);
 
-  // ── sort (client-side within page) ─────────────────────────────────────────
+  // ── sıralama (sayfa içi) ────────────────────────────────────────────────────
 
-  const sorted = [...data.items].sort((a, b) => {
+  const sirali = [...data.items].sort((a, b) => {
     const av = a[sortKey] ?? "";
     const bv = b[sortKey] ?? "";
     if (av < bv) return sortDir === "asc" ? -1 : 1;
@@ -98,63 +104,63 @@ export default function EmisyonRaporlariPage() {
     return 0;
   });
 
-  function toggleSort(key: SortKey) {
+  function siralamaToggle(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   }
 
-  // ── filter actions ──────────────────────────────────────────────────────────
+  // ── filtre işlemleri ────────────────────────────────────────────────────────
 
-  function handleSearch() {
-    setPage(1);
-    setActiveFilters({ ...filters });
+  function ara() {
+    setSayfa(1);
+    setAktifFiltre({ ...filtre });
   }
 
-  function handleReset() {
-    setFilters(EMPTY_FILTERS);
-    setActiveFilters(EMPTY_FILTERS);
-    setPage(1);
+  function sifirla() {
+    setFiltre(BOS_FILTRE);
+    setAktifFiltre(BOS_FILTRE);
+    setSayfa(1);
   }
 
-  function handleNameInput(value: string) {
-    setFilters((f) => ({ ...f, ship_name: value }));
-    if (value.length > 1) {
-      const q = value.toLowerCase();
-      const suggestions = [...new Set(
+  function adGirisi(deger: string) {
+    setFiltre((f) => ({ ...f, ship_name: deger }));
+    if (deger.length > 1) {
+      const q = deger.toLowerCase();
+      const oneriler = [...new Set(
         data.items.map((r) => r.ship_name).filter((n) => n.toLowerCase().includes(q))
       )].slice(0, 6);
-      setNameSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
+      setAdOneri(oneriler);
+      setOneriGoster(oneriler.length > 0);
     } else {
-      setShowSuggestions(false);
+      setOneriGoster(false);
     }
   }
 
-  // ── download ────────────────────────────────────────────────────────────────
+  // ── indirme ─────────────────────────────────────────────────────────────────
 
-  function handleDownload(v: DatasetVersion) {
+  function indir(v: DatasetVersion) {
     if (v.file_url) {
       window.open(v.file_url, "_blank");
     } else {
-      const name = v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`;
-      alert(`"${name}" dosyası indiriliyor…`);
+      const ad = v.file_name ?? `veri_seti_${v.reporting_period}_s${v.version}.csv`;
+      alert(`"${ad}" dosyası indiriliyor…`);
     }
   }
 
-  // ── helpers ─────────────────────────────────────────────────────────────────
+  // ── yardımcılar ─────────────────────────────────────────────────────────────
 
-  function SortIcon({ col }: { col: SortKey }) {
+  function SiralamaIkonu({ col }: { col: SortKey }) {
     if (sortKey !== col) return <span className="ml-1 text-gray-300">↕</span>;
     return <span className="ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
   }
 
-  const displayStart = data.total === 0 ? 0 : (page - 1) * data.page_size + 1;
-  const displayEnd   = Math.min(page * data.page_size, data.total);
+  const gosterimBaslangic = data.total === 0 ? 0 : (sayfa - 1) * data.page_size + 1;
+  const gosterimBitis     = Math.min(sayfa * data.page_size, data.total);
 
-  const fmtDate = (iso: string) =>
+  const tarihFormat = (iso: string) =>
     new Date(iso).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-  const fmtNum = (n?: number) =>
+  const sayiFormat = (n?: number) =>
     n != null ? n.toLocaleString("tr-TR", { maximumFractionDigits: 2 }) : "—";
 
   // ── render ──────────────────────────────────────────────────────────────────
@@ -166,14 +172,14 @@ export default function EmisyonRaporlariPage() {
         subtitle="Gemi Emisyon Raporlama Veritabanı"
       />
 
-      {/* ── Bilgilendirme Alanı ─────────────────────────────────────── */}
+      {/* Bilgilendirme */}
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide">
           Bilgilendirme
         </h3>
         <ul className="space-y-2 text-sm text-gray-600 list-disc list-inside leading-relaxed">
           <li>
-            Emisyon raporlama kuralları IMO DCS (Veri Toplama Sistemi) ve EU MRV yönetmeliği
+            Emisyon raporlama kuralları IMO DCS (Veri Toplama Sistemi) ve AB MRV yönetmeliği
             çerçevesinde uygulanmaktadır.
           </li>
           <li>
@@ -191,41 +197,41 @@ export default function EmisyonRaporlariPage() {
         </ul>
       </div>
 
-      {/* ── Arama ve Filtre Paneli ──────────────────────────────────── */}
+      {/* Arama ve Filtre */}
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-4">Arama ve Filtrele</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
           <div>
-            <label className="label">IMO Number</label>
+            <label className="label">IMO Numarası</label>
             <input
               type="text"
               className="input-field"
               placeholder="IMO numarası girin"
-              value={filters.imo_number}
-              onChange={(e) => setFilters((f) => ({ ...f, imo_number: e.target.value }))}
+              value={filtre.imo_number}
+              onChange={(e) => setFiltre((f) => ({ ...f, imo_number: e.target.value }))}
             />
           </div>
 
           <div className="relative">
-            <label className="label">Ship Name</label>
+            <label className="label">Gemi Adı</label>
             <input
               type="text"
               className="input-field"
               placeholder="Gemi adı ara…"
-              value={filters.ship_name}
-              onChange={(e) => handleNameInput(e.target.value)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              value={filtre.ship_name}
+              onChange={(e) => adGirisi(e.target.value)}
+              onBlur={() => setTimeout(() => setOneriGoster(false), 150)}
             />
-            {showSuggestions && (
+            {oneriGoster && (
               <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1">
-                {nameSuggestions.map((s) => (
+                {adOneri.map((s) => (
                   <button
                     key={s}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                     onMouseDown={() => {
-                      setFilters((f) => ({ ...f, ship_name: s }));
-                      setShowSuggestions(false);
+                      setFiltre((f) => ({ ...f, ship_name: s }));
+                      setOneriGoster(false);
                     }}
                   >
                     {s}
@@ -236,58 +242,58 @@ export default function EmisyonRaporlariPage() {
           </div>
 
           <div>
-            <label className="label">Reporting Period</label>
+            <label className="label">Raporlama Dönemi</label>
             <select
               className="input-field"
-              value={filters.reporting_period}
-              onChange={(e) => setFilters((f) => ({ ...f, reporting_period: e.target.value }))}
+              value={filtre.reporting_period}
+              onChange={(e) => setFiltre((f) => ({ ...f, reporting_period: e.target.value }))}
             >
               <option value="">Tümü</option>
-              {REPORTING_PERIODS.map((y) => (
+              {RAPORLAMA_DONEM.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="label">Ship Type</label>
+            <label className="label">Gemi Türü</label>
             <select
               className="input-field"
-              value={filters.ship_type}
-              onChange={(e) => setFilters((f) => ({ ...f, ship_type: e.target.value }))}
+              value={filtre.ship_type}
+              onChange={(e) => setFiltre((f) => ({ ...f, ship_type: e.target.value }))}
             >
               <option value="">Tümü</option>
-              {SHIP_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {GEMI_TURLERI.map((t) => (
+                <option key={t.deger} value={t.deger}>{t.etiket}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="label">Report Coverage</label>
+            <label className="label">Rapor Kapsamı</label>
             <select
               className="input-field"
-              value={filters.report_coverage}
-              onChange={(e) => setFilters((f) => ({ ...f, report_coverage: e.target.value }))}
+              value={filtre.report_coverage}
+              onChange={(e) => setFiltre((f) => ({ ...f, report_coverage: e.target.value }))}
             >
               <option value="">Tümü</option>
-              <option value="Full Reporting Period">Full Reporting Period</option>
-              <option value="Partial Reporting Period">Partial Reporting Period</option>
+              <option value="Full Reporting Period">Tam Raporlama Dönemi</option>
+              <option value="Partial Reporting Period">Kısmi Raporlama Dönemi</option>
             </select>
           </div>
         </div>
 
         <div className="flex gap-3 mt-5">
-          <button onClick={handleSearch} className="btn-primary flex items-center gap-2">
-            <Search className="w-4 h-4" /> Search
+          <button onClick={ara} className="btn-primary flex items-center gap-2">
+            <Search className="w-4 h-4" /> Ara
           </button>
-          <button onClick={handleReset} className="btn-secondary flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" /> Reset
+          <button onClick={sifirla} className="btn-secondary flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Sıfırla
           </button>
         </div>
       </div>
 
-      {/* ── Gemi Emisyon Raporları Tablosu ──────────────────────────── */}
+      {/* Gemi Emisyon Raporları Tablosu */}
       <div className="card p-0 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-800">Gemi Emisyon Raporları</h3>
@@ -297,69 +303,65 @@ export default function EmisyonRaporlariPage() {
           <table className="w-full">
             <thead>
               <tr>
-                <th className="table-header w-28">Actions</th>
+                <th className="table-header w-28">İşlemler</th>
                 {(
                   [
-                    ["imo_number",     "IMO"],
-                    ["ship_name",      "Name"],
-                    ["ship_type",      "Ship Type"],
-                    ["company",        "Company"],
-                    ["reporting_period","RP"],
-                    ["co2_emissions",  "Total CO₂ Emissions (t)"],
-                    ["co2eq_emissions","Total CO₂eq Emissions (t)"],
+                    ["imo_number",      "IMO"],
+                    ["ship_name",       "Gemi Adı"],
+                    ["ship_type",       "Gemi Türü"],
+                    ["company",         "Şirket"],
+                    ["reporting_period","Dönem"],
+                    ["co2_emissions",   "Toplam CO₂ Emisyonu (t)"],
+                    ["co2eq_emissions", "Toplam CO₂e Emisyonu (t)"],
                   ] as [SortKey, string][]
-                ).map(([col, label]) => (
+                ).map(([col, etiket]) => (
                   <th
                     key={col}
                     className="table-header cursor-pointer select-none hover:bg-gray-100 transition-colors"
-                    onClick={() => toggleSort(col)}
+                    onClick={() => siralamaToggle(col)}
                   >
-                    {label}
-                    <SortIcon col={col} />
+                    {etiket}
+                    <SiralamaIkonu col={col} />
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {yukleniyor ? (
                 <tr>
                   <td colSpan={8} className="text-center py-14">
                     <div className="w-7 h-7 border-4 border-navy-600 border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
-              ) : sorted.length === 0 ? (
+              ) : sirali.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-14 text-gray-400 text-sm">
                     Kayıt bulunamadı
                   </td>
                 </tr>
               ) : (
-                sorted.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="hover:bg-blue-50 transition-colors"
-                  >
-                    {/* Actions dropdown */}
+                sirali.map((r) => (
+                  <tr key={r.id} className="hover:bg-blue-50 transition-colors">
                     <td className="table-cell">
                       <div className="relative inline-block">
                         <button
                           className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1"
                           onClick={() =>
-                            setOpenActionId(openActionId === r.id ? null : r.id)
+                            setAcikIslemId(acikIslemId === r.id ? null : r.id)
                           }
                         >
-                          Actions <ChevronDown className="w-3 h-3" />
+                          İşlemler <ChevronDown className="w-3 h-3" />
                         </button>
-                        {openActionId === r.id && (
+                        {acikIslemId === r.id && (
                           <div className="absolute z-30 left-0 top-8 w-36 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <button
                               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
                               onClick={() => {
-                                setDetailModal(r);
-                                setOpenActionId(null);
+                                setDetayModal(r);
+                                setAcikIslemId(null);
                               }}
                             >
-                              <Eye className="w-3.5 h-3.5" /> View
+                              <Eye className="w-3.5 h-3.5" /> Görüntüle
                             </button>
                           </div>
                         )}
@@ -367,11 +369,13 @@ export default function EmisyonRaporlariPage() {
                     </td>
                     <td className="table-cell font-mono text-xs">{r.imo_number}</td>
                     <td className="table-cell font-medium text-navy-800">{r.ship_name}</td>
-                    <td className="table-cell text-xs text-gray-500">{r.ship_type ?? "—"}</td>
+                    <td className="table-cell text-xs text-gray-500">
+                      {GEMI_TURLERI.find((t) => t.deger === r.ship_type)?.etiket ?? r.ship_type ?? "—"}
+                    </td>
                     <td className="table-cell text-xs text-gray-500">{r.company ?? "—"}</td>
                     <td className="table-cell text-center font-semibold">{r.reporting_period}</td>
-                    <td className="table-cell text-right tabular-nums">{fmtNum(r.co2_emissions)}</td>
-                    <td className="table-cell text-right tabular-nums">{fmtNum(r.co2eq_emissions)}</td>
+                    <td className="table-cell text-right tabular-nums">{sayiFormat(r.co2_emissions)}</td>
+                    <td className="table-cell text-right tabular-nums">{sayiFormat(r.co2eq_emissions)}</td>
                   </tr>
                 ))
               )}
@@ -379,129 +383,121 @@ export default function EmisyonRaporlariPage() {
           </table>
         </div>
 
-        {/* ── Sayfalama ─────────────────────────────────────────────── */}
+        {/* Sayfalama */}
         <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             <button
               className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
-              onClick={() => setPage(1)}
-              disabled={page <= 1}
+              onClick={() => setSayfa(1)}
+              disabled={sayfa <= 1}
               title="İlk sayfa"
             >
               «
             </button>
             <button
               className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
+              onClick={() => setSayfa((p) => Math.max(1, p - 1))}
+              disabled={sayfa <= 1}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <span className="px-3 py-1 bg-navy-700 text-white rounded text-sm font-medium min-w-[2.5rem] text-center">
-              {page}
+              {sayfa}
             </span>
             <button
               className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
-              onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
-              disabled={page >= data.total_pages}
+              onClick={() => setSayfa((p) => Math.min(data.total_pages, p + 1))}
+              disabled={sayfa >= data.total_pages}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <button
               className="btn-secondary px-2 py-1 text-xs disabled:opacity-40"
-              onClick={() => setPage(data.total_pages)}
-              disabled={page >= data.total_pages}
+              onClick={() => setSayfa(data.total_pages)}
+              disabled={sayfa >= data.total_pages}
               title="Son sayfa"
             >
               »
             </button>
             <button
               className="btn-secondary px-2 py-1 text-xs flex items-center gap-1 ml-2"
-              onClick={loadReports}
+              onClick={raporlariYukle}
               title="Yenile"
             >
-              <RotateCcw className="w-3 h-3" /> Refresh
+              <RotateCcw className="w-3 h-3" /> Yenile
             </button>
           </div>
           <div className="text-sm text-gray-500 text-right">
             <span>
-              Page{" "}
-              <span className="font-medium text-gray-700">{page}</span>
-              {" "}of {data.total_pages.toLocaleString()}
+              Sayfa{" "}
+              <span className="font-medium text-gray-700">{sayfa}</span>
+              {" "}/ {data.total_pages.toLocaleString("tr-TR")}
             </span>
             <span className="ml-5">
-              Displaying{" "}
               <span className="font-medium text-gray-700">
-                {displayStart} – {displayEnd}
+                {gosterimBaslangic} – {gosterimBitis}
               </span>
-              {" "}of {data.total.toLocaleString()}
+              {" "}gösteriliyor, toplam {data.total.toLocaleString("tr-TR")}
             </span>
           </div>
         </div>
       </div>
 
-      {/* ── Dosya ve Versiyon Tablosu ───────────────────────────────── */}
+      {/* Veri Seti Sürümleri Tablosu */}
       <div className="card p-0 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-800">Dataset Versions</h3>
+          <h3 className="font-semibold text-gray-800">Veri Seti Sürümleri</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
-                <th className="table-header w-36">Actions</th>
-                <th className="table-header">Reporting Period</th>
-                <th className="table-header">Version</th>
-                <th className="table-header">Generation Date</th>
-                <th className="table-header">File</th>
+                <th className="table-header w-36">İşlemler</th>
+                <th className="table-header">Raporlama Dönemi</th>
+                <th className="table-header">Sürüm</th>
+                <th className="table-header">Oluşturulma Tarihi</th>
+                <th className="table-header">Dosya</th>
               </tr>
             </thead>
             <tbody>
-              {versionsLoading ? (
+              {surumYukleniyor ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10">
                     <div className="w-7 h-7 border-4 border-navy-600 border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
-              ) : versions.length === 0 ? (
+              ) : surumler.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10 text-gray-400 text-sm">
                     Kayıt bulunamadı
                   </td>
                 </tr>
               ) : (
-                versions.map((v) => (
+                surumler.map((v) => (
                   <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                    {/* File actions dropdown */}
                     <td className="table-cell">
                       <div className="relative inline-block">
                         <button
                           className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1"
                           onClick={() =>
-                            setOpenVersionId(openVersionId === v.id ? null : v.id)
+                            setAcikSurumId(acikSurumId === v.id ? null : v.id)
                           }
                         >
-                          Actions <ChevronDown className="w-3 h-3" />
+                          İşlemler <ChevronDown className="w-3 h-3" />
                         </button>
-                        {openVersionId === v.id && (
-                          <div className="absolute z-30 left-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        {acikSurumId === v.id && (
+                          <div className="absolute z-30 left-0 top-8 w-52 bg-white border border-gray-200 rounded-lg shadow-lg">
                             <button
                               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                              onClick={() => {
-                                handleDownload(v);
-                                setOpenVersionId(null);
-                              }}
+                              onClick={() => { indir(v); setAcikSurumId(null); }}
                             >
-                              <Download className="w-3.5 h-3.5" /> Download
+                              <Download className="w-3.5 h-3.5" /> İndir
                             </button>
                             <button
                               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                              onClick={() => {
-                                setVersionModal(v);
-                                setOpenVersionId(null);
-                              }}
+                              onClick={() => { setSurumModal(v); setAcikSurumId(null); }}
                             >
-                              <History className="w-3.5 h-3.5" /> View Previous Versions
+                              <History className="w-3.5 h-3.5" /> Önceki Sürümleri Görüntüle
                             </button>
                           </div>
                         )}
@@ -509,10 +505,10 @@ export default function EmisyonRaporlariPage() {
                     </td>
                     <td className="table-cell font-semibold">{v.reporting_period}</td>
                     <td className="table-cell">{v.version}</td>
-                    <td className="table-cell">{fmtDate(v.generation_date)}</td>
+                    <td className="table-cell">{tarihFormat(v.generation_date)}</td>
                     <td className="table-cell">
                       <span className="text-xs font-mono text-navy-700">
-                        {v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`}
+                        {v.file_name ?? `veri_seti_${v.reporting_period}_s${v.version}.csv`}
                       </span>
                     </td>
                   </tr>
@@ -523,94 +519,99 @@ export default function EmisyonRaporlariPage() {
         </div>
       </div>
 
-      {/* ── Gemi Detay Modalı ───────────────────────────────────────── */}
+      {/* Gemi Detay Modalı */}
       <Modal
-        open={detailModal !== null}
-        onClose={() => setDetailModal(null)}
+        open={detayModal !== null}
+        onClose={() => setDetayModal(null)}
         title="Gemi Emisyon Raporu Detayı"
         size="lg"
       >
-        {detailModal && (
+        {detayModal && (
           <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <div>
-              <dt className="text-gray-500 mb-0.5">IMO Number</dt>
-              <dd className="font-semibold font-mono">{detailModal.imo_number}</dd>
+              <dt className="text-gray-500 mb-0.5">IMO Numarası</dt>
+              <dd className="font-semibold font-mono">{detayModal.imo_number}</dd>
             </div>
             <div>
-              <dt className="text-gray-500 mb-0.5">Ship Name</dt>
-              <dd className="font-semibold">{detailModal.ship_name}</dd>
+              <dt className="text-gray-500 mb-0.5">Gemi Adı</dt>
+              <dd className="font-semibold">{detayModal.ship_name}</dd>
             </div>
             <div>
-              <dt className="text-gray-500 mb-0.5">Ship Type</dt>
-              <dd>{detailModal.ship_type ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500 mb-0.5">Company</dt>
-              <dd>{detailModal.company ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500 mb-0.5">Reporting Period</dt>
-              <dd className="font-semibold">{detailModal.reporting_period}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500 mb-0.5">Report Coverage</dt>
-              <dd>{detailModal.report_coverage ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500 mb-0.5">Total CO₂ Emissions</dt>
-              <dd className="font-semibold text-red-700">
-                {fmtNum(detailModal.co2_emissions)} t
+              <dt className="text-gray-500 mb-0.5">Gemi Türü</dt>
+              <dd>
+                {GEMI_TURLERI.find((t) => t.deger === detayModal.ship_type)?.etiket
+                  ?? detayModal.ship_type ?? "—"}
               </dd>
             </div>
             <div>
-              <dt className="text-gray-500 mb-0.5">Total CO₂eq Emissions</dt>
+              <dt className="text-gray-500 mb-0.5">Şirket</dt>
+              <dd>{detayModal.company ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Raporlama Dönemi</dt>
+              <dd className="font-semibold">{detayModal.reporting_period}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Rapor Kapsamı</dt>
+              <dd>
+                {detayModal.report_coverage === "Full Reporting Period"
+                  ? "Tam Raporlama Dönemi"
+                  : detayModal.report_coverage === "Partial Reporting Period"
+                  ? "Kısmi Raporlama Dönemi"
+                  : detayModal.report_coverage ?? "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Toplam CO₂ Emisyonu</dt>
+              <dd className="font-semibold text-red-700">
+                {sayiFormat(detayModal.co2_emissions)} t
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 mb-0.5">Toplam CO₂e Emisyonu</dt>
               <dd className="font-semibold text-orange-700">
-                {fmtNum(detailModal.co2eq_emissions)} t
+                {sayiFormat(detayModal.co2eq_emissions)} t
               </dd>
             </div>
           </dl>
         )}
       </Modal>
 
-      {/* ── Versiyon Geçmişi Modalı ─────────────────────────────────── */}
+      {/* Sürüm Geçmişi Modalı */}
       <Modal
-        open={versionModal !== null}
-        onClose={() => setVersionModal(null)}
-        title={
-          versionModal
-            ? `Version History — ${versionModal.reporting_period}`
-            : "Version History"
-        }
+        open={surumModal !== null}
+        onClose={() => setSurumModal(null)}
+        title={surumModal ? `Sürüm Geçmişi — ${surumModal.reporting_period}` : "Sürüm Geçmişi"}
         size="lg"
       >
-        {versionModal && (
+        {surumModal && (
           <div>
             <p className="text-sm text-gray-500 mb-4">
-              {versionModal.reporting_period} dönemine ait tüm versiyon geçmişi.
+              {surumModal.reporting_period} dönemine ait tüm sürüm geçmişi aşağıda listelenmiştir.
             </p>
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="table-header">Version</th>
-                  <th className="table-header">Generation Date</th>
-                  <th className="table-header">Download</th>
+                  <th className="table-header">Sürüm</th>
+                  <th className="table-header">Oluşturulma Tarihi</th>
+                  <th className="table-header">İndir</th>
                 </tr>
               </thead>
               <tbody>
-                {versions
-                  .filter((v) => v.reporting_period === versionModal.reporting_period)
+                {surumler
+                  .filter((v) => v.reporting_period === surumModal.reporting_period)
                   .sort((a, b) => b.version - a.version)
                   .map((v) => (
                     <tr key={v.id} className="hover:bg-gray-50">
                       <td className="table-cell font-semibold">{v.version}</td>
-                      <td className="table-cell">{fmtDate(v.generation_date)}</td>
+                      <td className="table-cell">{tarihFormat(v.generation_date)}</td>
                       <td className="table-cell">
                         <button
                           className="text-navy-700 hover:underline flex items-center gap-1 text-xs"
-                          onClick={() => handleDownload(v)}
+                          onClick={() => indir(v)}
                         >
                           <Download className="w-3 h-3" />
-                          {v.file_name ?? `dataset_${v.reporting_period}_v${v.version}.csv`}
+                          {v.file_name ?? `veri_seti_${v.reporting_period}_s${v.version}.csv`}
                         </button>
                       </td>
                     </tr>
@@ -621,14 +622,11 @@ export default function EmisyonRaporlariPage() {
         )}
       </Modal>
 
-      {/* overlay to close dropdowns on outside click */}
-      {(openActionId !== null || openVersionId !== null) && (
+      {/* Dropdown dışına tıklanınca kapat */}
+      {(acikIslemId !== null || acikSurumId !== null) && (
         <div
           className="fixed inset-0 z-20"
-          onClick={() => {
-            setOpenActionId(null);
-            setOpenVersionId(null);
-          }}
+          onClick={() => { setAcikIslemId(null); setAcikSurumId(null); }}
         />
       )}
     </div>
