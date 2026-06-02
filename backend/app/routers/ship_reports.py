@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import ShipReport, DatasetVersion, User
+from app.models.models import ShipReport, DatasetVersion
 from app.schemas.schemas import ShipReportListResponse, DatasetVersionResponse
-from app.auth.auth import get_current_user
 
 router = APIRouter(tags=["Ship Reports"])
 
@@ -18,7 +17,6 @@ def list_ship_reports(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     q = db.query(ShipReport)
     if imo_number:
@@ -52,7 +50,6 @@ def list_ship_reports(
 @router.get("/api/dataset-versions", response_model=list[DatasetVersionResponse])
 def list_dataset_versions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     return (
         db.query(DatasetVersion)
