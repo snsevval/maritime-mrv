@@ -10,7 +10,7 @@ export default function Home() {
     if (isAuthenticated()) {
       router.replace("/dashboard");
     } else {
-      router.replace("/login");
+      router.replace("/emisyon-raporlari");
     }
   }, [router]);
 
