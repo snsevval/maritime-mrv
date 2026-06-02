@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Ship, FileText, ClipboardList, CheckSquare, FileCheck,
-  BarChart2, LogOut, Anchor,
+  BarChart2, LogOut, Anchor, Building2, Scale, Settings, Headphones,
 } from "lucide-react";
 import { clearAuth, getCurrentUser } from "@/lib/auth";
+import { getViewMode, type ViewMode } from "@/components/TopBar";
 import type { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +18,7 @@ interface NavItem {
   roles: UserRole[];
 }
 
-const NAV_ITEMS: NavItem[] = [
+const HALK_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",                   label: "Kontrol Paneli",    icon: BarChart2,     roles: ["shipping_company", "verifier", "ministry"] },
   { href: "/dashboard/gemiler",           label: "Gemiler",           icon: Ship,          roles: ["shipping_company", "ministry"] },
   { href: "/dashboard/izleme-planlari",   label: "İzleme Planları",   icon: ClipboardList, roles: ["shipping_company", "ministry"] },
@@ -26,17 +28,34 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/istatistikler",     label: "İstatistikler",     icon: BarChart2,     roles: ["ministry"] },
 ];
 
+const OZEL_NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard/ozel/filom",          label: "Filom",                 icon: Ship,       roles: ["shipping_company", "verifier", "ministry"] },
+  { href: "/dashboard/ozel/sirketlerim",    label: "Şirketlerim",           icon: Building2,  roles: ["shipping_company", "verifier", "ministry"] },
+  { href: "/dashboard/ozel/uyumluluk",      label: "Uyumluluk Dengeleri",   icon: Scale,      roles: ["shipping_company", "verifier", "ministry"] },
+  { href: "/dashboard/ozel/yapilandirma",   label: "Yapılandırma",          icon: Settings,   roles: ["shipping_company", "verifier", "ministry"] },
+  { href: "/dashboard/ozel/destek",         label: "Destek",                icon: Headphones, roles: ["shipping_company", "verifier", "ministry"] },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const user = getCurrentUser();
+  const [mode, setMode] = useState<ViewMode>("halk");
+
+  useEffect(() => {
+    setMode(getViewMode());
+    function onModeChange() { setMode(getViewMode()); }
+    window.addEventListener("viewModeChange", onModeChange);
+    return () => window.removeEventListener("viewModeChange", onModeChange);
+  }, []);
 
   function handleLogout() {
     clearAuth();
     router.replace("/login");
   }
 
-  const visibleItems = NAV_ITEMS.filter(
+  const allItems = mode === "halk" ? HALK_NAV_ITEMS : OZEL_NAV_ITEMS;
+  const visibleItems = allItems.filter(
     (item) => user && item.roles.includes(user.role)
   );
 
