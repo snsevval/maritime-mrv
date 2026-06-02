@@ -107,6 +107,7 @@ export const shipReportsApi = {
 // Özel mod
 export const ozelApi = {
   filom: (params?: Record<string, unknown>) => api.get("/api/ozel/filom", { params }),
+  sirketlerim: (params?: Record<string, unknown>) => api.get("/api/ozel/sirketlerim", { params }),
 };
 
 // Stats

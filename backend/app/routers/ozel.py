@@ -3,8 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
-from app.models.models import Ship, User, MonitoringPlan, EmissionReport, Verification, UserRole
-from app.schemas.schemas import FilomListResponse, FilomItemResponse
+from app.models.models import Ship, User, MonitoringPlan, EmissionReport, Verification, ComplianceDocument, UserRole
+from app.schemas.schemas import FilomListResponse, FilomItemResponse, SirketListResponse, SirketItemResponse
 from app.auth.auth import get_current_user
 
 router = APIRouter(tags=["Özel"])
@@ -113,6 +113,116 @@ def list_filom(
     paginated = items[start: start + page_size]
 
     return FilomListResponse(
+        items=paginated,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 1,
+    )
+
+
+@router.get("/api/ozel/sirketlerim", response_model=SirketListResponse)
+def list_sirketlerim(
+    company: Optional[str] = Query(None),
+    cer_status: Optional[str] = Query(None),
+    cvr_status: Optional[str] = Query(None),
+    reporting_period: Optional[int] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(User).options(joinedload(User.ships)).filter(
+        User.role == UserRole.shipping_company,
+        User.is_active == True,
+    )
+
+    if current_user.role == UserRole.shipping_company:
+        q = q.filter(User.id == current_user.id)
+
+    if company:
+        q = q.filter(User.company_name.ilike(f"%{company}%"))
+
+    users = q.order_by(User.company_name).all()
+
+    items: list[SirketItemResponse] = []
+    for u in users:
+        ships = u.ships
+        ship_ids = [s.id for s in ships]
+        ship_imos = [s.imo_number for s in ships]
+
+        # CO2 toplamı
+        co2_total: Optional[float] = None
+        verifier_name: Optional[str] = None
+        latest_period: Optional[int] = None
+        item_cvr_status: Optional[str] = None
+        item_cer_status: Optional[str] = None
+
+        if ship_ids:
+            report_q = db.query(EmissionReport).filter(EmissionReport.ship_id.in_(ship_ids))
+            if reporting_period:
+                from sqlalchemy import extract
+                report_q = report_q.filter(
+                    extract("year", EmissionReport.reporting_period_start) == reporting_period
+                )
+            reports = report_q.all()
+            if reports:
+                vals = [
+                    r.ghg_emissions.get("total_co2eq_mt", 0)
+                    for r in reports
+                    if isinstance(r.ghg_emissions, dict)
+                ]
+                co2_total = sum(float(v) for v in vals if v)
+                latest_report = max(reports, key=lambda r: r.updated_at)
+                latest_period = latest_report.reporting_period_start.year
+
+                latest_vr = (
+                    db.query(Verification)
+                    .options(joinedload(Verification.verifier))
+                    .filter(Verification.report_id == latest_report.id)
+                    .order_by(Verification.created_at.desc())
+                    .first()
+                )
+                if latest_vr:
+                    item_cvr_status = latest_vr.status.value
+                    if latest_vr.verifier:
+                        verifier_name = latest_vr.verifier.full_name
+
+            latest_doc = (
+                db.query(ComplianceDocument)
+                .filter(ComplianceDocument.ship_id.in_(ship_ids))
+                .order_by(ComplianceDocument.created_at.desc())
+                .first()
+            )
+            if latest_doc:
+                from datetime import datetime
+                now = datetime.utcnow()
+                item_cer_status = "valid" if latest_doc.valid_until >= now else "expired"
+
+        if cer_status and item_cer_status != cer_status:
+            continue
+        if cvr_status and item_cvr_status != cvr_status:
+            continue
+
+        items.append(SirketItemResponse(
+            id=u.id,
+            company_name=u.company_name,
+            email=u.email,
+            phone=u.phone,
+            total_ships=len(ships),
+            ship_imos=ship_imos,
+            co2_total=round(co2_total, 4) if co2_total else None,
+            cer_status=item_cer_status,
+            cvr_status=item_cvr_status,
+            reporting_period=latest_period,
+            verifier_name=verifier_name,
+        ))
+
+    total = len(items)
+    start = (page - 1) * page_size
+    paginated = items[start: start + page_size]
+
+    return SirketListResponse(
         items=paginated,
         total=total,
         page=page,

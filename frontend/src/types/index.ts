@@ -154,6 +154,28 @@ export interface FilomList {
   total_pages: number;
 }
 
+export interface SirketItem {
+  id: number;
+  company_name?: string;
+  email: string;
+  phone?: string;
+  total_ships: number;
+  ship_imos: string[];
+  co2_total?: number;
+  cer_status?: string;
+  cvr_status?: string;
+  reporting_period?: number;
+  verifier_name?: string;
+}
+
+export interface SirketList {
+  items: SirketItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface AuthToken {
   access_token: string;
   token_type: string;

@@ -305,6 +305,32 @@ class FilomListResponse(BaseModel):
     total_pages: int
 
 
+# ── Şirketlerim (Özel) ────────────────────────────────────────────────────────
+
+class SirketItemResponse(BaseModel):
+    id: int
+    company_name: Optional[str] = None
+    email: str
+    phone: Optional[str] = None
+    total_ships: int
+    ship_imos: list[str]
+    co2_total: Optional[float] = None
+    cer_status: Optional[str] = None
+    cvr_status: Optional[str] = None
+    reporting_period: Optional[int] = None
+    verifier_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SirketListResponse(BaseModel):
+    items: list[SirketItemResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):
