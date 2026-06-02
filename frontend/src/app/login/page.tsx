@@ -62,7 +62,7 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: "url('/ship-bg.jpg')",
+          backgroundImage: "url('/ship-bg.png')",
           transform: `scale(1.12) translate(${pos.x}px, ${pos.y}px)`,
           willChange: "transform",
         }}
