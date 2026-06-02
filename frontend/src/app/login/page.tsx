@@ -77,15 +77,6 @@ export default function LoginPage() {
 
       {/* Form */}
       <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Denizcilik MRV
-          </h1>
-          <p className="text-blue-200/80 mt-2 text-sm">
-            İzleme, Raporlama ve Doğrulama Platformu
-          </p>
-        </div>
-
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-8">
           <h2 className="text-xl font-semibold text-white mb-6">Giriş Yap</h2>
 
