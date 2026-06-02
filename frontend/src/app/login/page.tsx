@@ -20,7 +20,8 @@ export default function LoginPage() {
       const res = await authApi.login(form.email, form.password);
       const data = res.data as AuthToken;
       setAuth(data.access_token, data.user);
-      router.replace("/dashboard");
+      localStorage.setItem("viewMode", "ozel");
+      router.replace("/dashboard/ozel/filom");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
