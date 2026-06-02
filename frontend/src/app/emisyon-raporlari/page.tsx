@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
-import { shipReportsApi, getErrorMessage } from "@/lib/api";
+import { publicApi, getErrorMessage } from "@/lib/api";
 import type { ShipReport, ShipReportList, DatasetVersion } from "@/types";
 import {
   ChevronDown, ChevronLeft, ChevronRight,
@@ -51,7 +51,7 @@ export default function PublicEmisyonRaporlariPage() {
       if (aktifFiltre.reporting_period) params.reporting_period = parseInt(aktifFiltre.reporting_period);
       if (aktifFiltre.ship_type)        params.ship_type        = aktifFiltre.ship_type;
       if (aktifFiltre.report_coverage)  params.report_coverage  = aktifFiltre.report_coverage;
-      const res = await shipReportsApi.list(params);
+      const res = await publicApi.get("/api/ship-reports", { params });
       setData(res.data as ShipReportList);
     } catch (e) { console.error(getErrorMessage(e)); }
     finally { setYukleniyor(false); }
@@ -59,7 +59,7 @@ export default function PublicEmisyonRaporlariPage() {
 
   useEffect(() => { raporlariYukle(); }, [raporlariYukle]);
   useEffect(() => {
-    shipReportsApi.datasetVersions().then((r) => setSurumler(r.data as DatasetVersion[])).catch(() => {});
+    publicApi.get("/api/dataset-versions").then((r) => setSurumler(r.data as DatasetVersion[])).catch(() => {});
   }, []);
 
   const sirali = [...data.items].sort((a, b) => {

@@ -8,6 +8,12 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Auth gerektirmeyen public sayfalar için — 401'de login'e yönlendirmez
+export const publicApi = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
 api.interceptors.request.use((config) => {
   const token = Cookies.get("mrv_token");
   if (token) {
