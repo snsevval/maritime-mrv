@@ -8,13 +8,18 @@ import { ROLE_LABELS } from "@/types";
 export type ViewMode = "halk" | "ozel";
 
 const PAGE_LABELS: Record<string, string> = {
-  "/dashboard":                   "Kontrol Paneli",
-  "/dashboard/gemiler":           "Gemiler",
-  "/dashboard/izleme-planlari":   "İzleme Planları",
-  "/dashboard/emisyon-raporlari": "Emisyon Raporları",
-  "/dashboard/dogrulama":         "Doğrulama",
-  "/dashboard/uyum-belgeleri":    "Uyum Belgeleri",
-  "/dashboard/istatistikler":     "İstatistikler",
+  "/dashboard":                        "Kontrol Paneli",
+  "/dashboard/gemiler":                "Gemiler",
+  "/dashboard/izleme-planlari":        "İzleme Planları",
+  "/dashboard/emisyon-raporlari":      "Emisyon Raporları",
+  "/dashboard/dogrulama":              "Doğrulama",
+  "/dashboard/uyum-belgeleri":         "Uyum Belgeleri",
+  "/dashboard/istatistikler":          "İstatistikler",
+  "/dashboard/ozel/filom":             "Filom",
+  "/dashboard/ozel/sirketlerim":       "Şirketlerim",
+  "/dashboard/ozel/uyumluluk":         "Uyumluluk Dengeleri",
+  "/dashboard/ozel/yapilandirma":      "Yapılandırma",
+  "/dashboard/ozel/destek":            "Destek",
 };
 
 export function getViewMode(): ViewMode {
