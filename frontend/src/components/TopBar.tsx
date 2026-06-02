@@ -1,6 +1,6 @@
 "use client";
 import { Bell, HelpCircle, ChevronDown, ChevronRight, Home, Globe, Lock } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { ROLE_LABELS } from "@/types";
@@ -34,6 +34,7 @@ export function setViewMode(mode: ViewMode) {
 
 export default function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const user = getCurrentUser();
   const pageLabel = PAGE_LABELS[pathname] ?? "";
   const initials = user?.full_name
@@ -91,7 +92,11 @@ export default function TopBar() {
         </button>
 
         {/* Help */}
-        <button className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+        <button
+          onClick={() => router.push("/dashboard/ozel/destek")}
+          title="Destek"
+          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        >
           <HelpCircle className="w-5 h-5" />
         </button>
 
