@@ -109,6 +109,8 @@ export const ozelApi = {
   filom: (params?: Record<string, unknown>) => api.get("/api/ozel/filom", { params }),
   sirketlerim: (params?: Record<string, unknown>) => api.get("/api/ozel/sirketlerim", { params }),
   uyumluluk: (params?: Record<string, unknown>) => api.get("/api/ozel/uyumluluk", { params }),
+  kullanicilar: (params?: Record<string, unknown>) => api.get("/api/ozel/kullanicilar", { params }),
+  toggleActive: (userId: number) => api.patch(`/api/ozel/kullanicilar/${userId}/toggle-active`),
 };
 
 // Stats

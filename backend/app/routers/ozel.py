@@ -1,6 +1,6 @@
 import math
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.models import Ship, User, MonitoringPlan, EmissionReport, Verification, ComplianceDocument, UserRole
@@ -8,6 +8,7 @@ from app.schemas.schemas import (
     FilomListResponse, FilomItemResponse,
     SirketListResponse, SirketItemResponse,
     UyumlulukListResponse, UyumlulukItemResponse,
+    UserResponse,
 )
 from app.auth.auth import get_current_user
 
@@ -361,3 +362,45 @@ def list_uyumluluk(
         page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 1,
     )
+
+
+@router.get("/api/ozel/kullanicilar", response_model=list[UserResponse])
+def list_kullanicilar(
+    full_name: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(User)
+    if current_user.role == UserRole.shipping_company:
+        q = q.filter(User.id == current_user.id)
+    if full_name:
+        q = q.filter(User.full_name.ilike(f"%{full_name}%"))
+    if email:
+        q = q.filter(User.email.ilike(f"%{email}%"))
+    if role:
+        q = q.filter(User.role == role)
+    if is_active is not None:
+        q = q.filter(User.is_active == is_active)
+    return q.order_by(User.full_name).all()
+
+
+@router.patch("/api/ozel/kullanicilar/{user_id}/toggle-active", response_model=UserResponse)
+def toggle_active(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.ministry, UserRole.verifier):
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Kendi hesabınızı devre dışı bırakamazsınız")
+    user.is_active = not user.is_active
+    db.commit()
+    db.refresh(user)
+    return user
