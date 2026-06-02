@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine, SessionLocal
 from app.routers import auth, ships, monitoring_plans, emission_reports, verifications, compliance_documents, stats
-from app.routers import ship_reports
+from app.routers import ship_reports, ozel
 
 Base.metadata.create_all(bind=engine)
 
@@ -50,6 +50,7 @@ app.include_router(verifications.router)
 app.include_router(compliance_documents.router)
 app.include_router(stats.router)
 app.include_router(ship_reports.router)
+app.include_router(ozel.router)
 
 
 @app.get("/")

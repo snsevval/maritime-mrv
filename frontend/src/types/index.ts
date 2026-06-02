@@ -131,6 +131,29 @@ export interface DatasetVersion {
   created_at: string;
 }
 
+export interface FilomItem {
+  id: number;
+  imo_number: string;
+  name: string;
+  flag: string;
+  ship_type?: string;
+  gross_tonnage?: number;
+  company_name?: string;
+  mp_status?: string;
+  report_status?: string;
+  reporting_period?: number;
+  vr_status?: string;
+  verifier_name?: string;
+}
+
+export interface FilomList {
+  items: FilomItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface AuthToken {
   access_token: string;
   token_type: string;

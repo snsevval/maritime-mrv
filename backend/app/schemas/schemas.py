@@ -278,6 +278,33 @@ class DatasetVersionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Filom (Özel) ──────────────────────────────────────────────────────────────
+
+class FilomItemResponse(BaseModel):
+    id: int
+    imo_number: str
+    name: str
+    flag: str
+    ship_type: Optional[str] = None
+    gross_tonnage: Optional[int] = None
+    company_name: Optional[str] = None
+    mp_status: Optional[str] = None
+    report_status: Optional[str] = None
+    reporting_period: Optional[int] = None
+    vr_status: Optional[str] = None
+    verifier_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class FilomListResponse(BaseModel):
+    items: list[FilomItemResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):

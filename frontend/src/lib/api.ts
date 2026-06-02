@@ -104,6 +104,11 @@ export const shipReportsApi = {
   datasetVersions: () => api.get("/api/dataset-versions"),
 };
 
+// Özel mod
+export const ozelApi = {
+  filom: (params?: Record<string, unknown>) => api.get("/api/ozel/filom", { params }),
+};
+
 // Stats
 export const statsApi = {
   get: () => api.get("/api/stats"),
