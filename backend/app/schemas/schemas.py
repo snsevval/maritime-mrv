@@ -9,19 +9,11 @@ from app.models.models import UserRole, ReportStatus, VerificationStatus
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
     role: UserRole
     full_name: str
     company_name: Optional[str] = None
     company_tax_id: Optional[str] = None
     phone: Optional[str] = None
-
-    @field_validator("password")
-    @classmethod
-    def password_min_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Şifre en az 6 karakter olmalıdır")
-        return v
 
 
 class UserLogin(BaseModel):
