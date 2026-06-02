@@ -106,7 +106,7 @@ export default function FilomPage() {
     setFavoriler((prev) => {
       const yeni = new Set(prev);
       yeni.has(id) ? yeni.delete(id) : yeni.add(id);
-      localStorage.setItem("filom_favoriler", JSON.stringify([...yeni]));
+      localStorage.setItem("filom_favoriler", JSON.stringify(Array.from(yeni)));
       return yeni;
     });
   }
