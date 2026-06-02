@@ -5,7 +5,6 @@ import Link from "next/link";
 import { authApi, getErrorMessage } from "@/lib/api";
 import { setAuth } from "@/lib/auth";
 import type { AuthToken } from "@/types";
-import { Ship } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,9 +32,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-4">
-            <Ship className="w-8 h-8 text-white" />
-          </div>
           <h1 className="text-3xl font-bold text-white">Denizcilik MRV</h1>
           <p className="text-navy-200 mt-2">İzleme, Raporlama ve Doğrulama Platformu</p>
         </div>

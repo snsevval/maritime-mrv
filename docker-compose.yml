@@ -25,6 +25,9 @@ services:
       DATABASE_URL: postgresql://mrv_user:mrv_password@db:5432/maritime_mrv
       SECRET_KEY: change-this-in-production-use-a-long-random-key
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      SMTP_EMAIL: ${SMTP_EMAIL:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

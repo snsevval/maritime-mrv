@@ -1,29 +1,25 @@
-import smtplib
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import httpx
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
 
 def send_activation_email(to_email: str, full_name: str, temp_password: str) -> None:
-    if not settings.SMTP_EMAIL or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP_EMAIL veya SMTP_PASSWORD tanımlanmamış, e-posta gönderilmiyor.")
+    if not settings.BREVO_API_KEY:
+        logger.warning("BREVO_API_KEY tanımlanmamış, e-posta gönderilmiyor.")
         return
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "TR-MRV Sistemi - Hesap Aktivasyonu"
-    msg["From"] = settings.SMTP_EMAIL
-    msg["To"] = to_email
+    sender_email = settings.SMTP_EMAIL or "dururenova@gmail.com"
 
     metin = (
         f"Sayın {full_name},\n\n"
         "TR-MRV Sistemi'nde hesabınız başarıyla oluşturulmuştur.\n\n"
         f"Geçici şifreniz: {temp_password}\n\n"
         "İlk girişinizde şifrenizi değiştirmeniz gerekmektedir.\n\n"
-        "Saygılarımızla,\n"
-        "TR-MRV Sistemi"
+        "Saygılarımızla,\nTR-MRV Sistemi"
     )
 
     html = f"""\
@@ -39,17 +35,24 @@ def send_activation_email(to_email: str, full_name: str, temp_password: str) -> 
       <p style="margin:0 0 8px;color:#555;font-size:13px">Geçici Şifreniz</p>
       <p style="margin:0;font-size:22px;font-weight:bold;color:#1A7A8A;letter-spacing:2px">{temp_password}</p>
     </div>
-    <p style="color:#e55;font-size:13px">⚠ İlk girişinizde şifrenizi değiştirmeniz gerekmektedir.</p>
+    <p style="color:#e55;font-size:13px">&#9888; İlk girişinizde şifrenizi değiştirmeniz gerekmektedir.</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
     <p style="font-size:12px;color:#999">Bu e-posta TR-MRV Sistemi tarafından otomatik olarak gönderilmiştir.</p>
   </div>
 </body></html>"""
 
-    msg.attach(MIMEText(metin, "plain", "utf-8"))
-    msg.attach(MIMEText(html, "html", "utf-8"))
+    payload = {
+        "sender": {"name": "TR-MRV Sistemi", "email": sender_email},
+        "to": [{"email": to_email, "name": full_name}],
+        "subject": "TR-MRV Sistemi - Hesap Aktivasyonu",
+        "textContent": metin,
+        "htmlContent": html,
+    }
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_EMAIL, to_email, msg.as_string())
+    with httpx.Client(timeout=15) as client:
+        r = client.post(
+            _BREVO_URL,
+            json=payload,
+            headers={"api-key": settings.BREVO_API_KEY, "Content-Type": "application/json"},
+        )
+        r.raise_for_status()

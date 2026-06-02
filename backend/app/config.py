@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
     SMTP_EMAIL: str = ""
     SMTP_PASSWORD: str = ""
+    BREVO_API_KEY: str = ""
 
     class Config:
         env_file = ".env"

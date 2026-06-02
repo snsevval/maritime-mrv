@@ -43,8 +43,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     try:
         from app.services.email import send_activation_email
         send_activation_email(payload.email, payload.full_name, temp_password)
+        logger.info("Aktivasyon e-postası gönderildi: %s", payload.email)
     except Exception as exc:
-        logger.warning("Aktivasyon e-postası gönderilemedi: %s", exc)
+        logger.error("Aktivasyon e-postası HATA [%s]: %s", type(exc).__name__, exc, exc_info=True)
 
     return user
 
