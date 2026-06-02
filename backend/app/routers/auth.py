@@ -1,9 +1,6 @@
 import logging
 import secrets
 import string
-import secrets
-import string
-import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -13,8 +10,6 @@ from app.models.models import User, PasswordResetToken
 from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token
 from app.auth.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.config import settings
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
