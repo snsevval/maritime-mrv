@@ -65,6 +65,8 @@ export default function TopBar() {
   function selectMode(m: ViewMode) {
     setViewMode(m);
     setDropdownOpen(false);
+    if (m === "ozel") router.push("/dashboard/ozel/filom");
+    else router.push("/dashboard/emisyon-raporlari");
   }
 
   return (
