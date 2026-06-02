@@ -3,8 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  Ship, FileText, ClipboardList, CheckSquare, FileCheck,
-  BarChart2, LogOut, Anchor, Building2, Scale, Settings, Headphones,
+  Ship, FileText, LogOut, Anchor, Building2, Scale, Settings, Headphones,
 } from "lucide-react";
 import { clearAuth, getCurrentUser } from "@/lib/auth";
 import { getViewMode, type ViewMode } from "@/components/TopBar";
@@ -19,13 +18,7 @@ interface NavItem {
 }
 
 const HALK_NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard",                   label: "Kontrol Paneli",    icon: BarChart2,     roles: ["shipping_company", "verifier", "ministry"] },
-  { href: "/dashboard/gemiler",           label: "Gemiler",           icon: Ship,          roles: ["shipping_company", "ministry"] },
-  { href: "/dashboard/izleme-planlari",   label: "İzleme Planları",   icon: ClipboardList, roles: ["shipping_company", "ministry"] },
-  { href: "/dashboard/emisyon-raporlari", label: "Emisyon Raporları", icon: FileText,      roles: ["shipping_company", "ministry"] },
-  { href: "/dashboard/dogrulama",         label: "Doğrulama",         icon: CheckSquare,   roles: ["verifier", "ministry"] },
-  { href: "/dashboard/uyum-belgeleri",    label: "Uyum Belgeleri",    icon: FileCheck,     roles: ["shipping_company", "ministry"] },
-  { href: "/dashboard/istatistikler",     label: "İstatistikler",     icon: BarChart2,     roles: ["ministry"] },
+  { href: "/dashboard/emisyon-raporlari", label: "Emisyon Raporları", icon: FileText, roles: ["shipping_company", "verifier", "ministry"] },
 ];
 
 const OZEL_NAV_ITEMS: NavItem[] = [
