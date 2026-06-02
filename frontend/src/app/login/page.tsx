@@ -78,12 +78,19 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Hesabınız yok mu?{" "}
-            <Link href="/register" className="text-navy-700 hover:underline font-medium">
-              Kayıt Ol
-            </Link>
-          </p>
+          <div className="mt-6 space-y-2 text-center text-sm text-gray-500">
+            <p>
+              <Link href="/forgot-password" className="text-navy-700 hover:underline font-medium">
+                Şifremi Unuttum
+              </Link>
+            </p>
+            <p>
+              Hesabınız yok mu?{" "}
+              <Link href="/register" className="text-navy-700 hover:underline font-medium">
+                Kayıt Ol
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

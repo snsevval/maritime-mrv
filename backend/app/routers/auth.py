@@ -1,14 +1,20 @@
 import logging
 import secrets
 import string
-from datetime import timedelta
+import secrets
+import string
+import logging
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import User
+from app.models.models import User, PasswordResetToken
 from app.schemas.schemas import UserCreate, UserLogin, UserResponse, Token
 from app.auth.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +71,68 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password", status_code=200)
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email, User.is_active == True).first()
+    # Güvenlik: kullanıcı yoksa da aynı mesajı döndür
+    if user:
+        # Eski tokenları geçersiz kıl
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used == False,
+        ).update({"used": True})
+        db.commit()
+
+        token = secrets.token_urlsafe(32)
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+        )
+        db.add(reset_token)
+        db.commit()
+
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        try:
+            from app.services.email import send_reset_email
+            send_reset_email(user.email, user.full_name, reset_url)
+        except Exception as exc:
+            logger.error("Şifre sıfırlama e-postası HATA: %s", exc)
+
+    return {"message": "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi."}
+
+
+@router.post("/reset-password", status_code=200)
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalıdır")
+
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == payload.token,
+        PasswordResetToken.used == False,
+        PasswordResetToken.expires_at > datetime.utcnow(),
+    ).first()
+
+    if not reset_token:
+        raise HTTPException(status_code=400, detail="Geçersiz veya süresi dolmuş bağlantı")
+
+    user = db.query(User).filter(User.id == reset_token.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+
+    user.password_hash = hash_password(payload.new_password)
+    reset_token.used = True
+    db.commit()
+
+    return {"message": "Şifreniz başarıyla güncellendi."}
