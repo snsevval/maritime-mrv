@@ -108,6 +108,7 @@ export const shipReportsApi = {
 export const ozelApi = {
   filom: (params?: Record<string, unknown>) => api.get("/api/ozel/filom", { params }),
   sirketlerim: (params?: Record<string, unknown>) => api.get("/api/ozel/sirketlerim", { params }),
+  uyumluluk: (params?: Record<string, unknown>) => api.get("/api/ozel/uyumluluk", { params }),
 };
 
 // Stats

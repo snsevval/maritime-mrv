@@ -331,6 +331,34 @@ class SirketListResponse(BaseModel):
     total_pages: int
 
 
+# ── Uyumluluk Dengeleri (Özel) ────────────────────────────────────────────────
+
+class UyumlulukItemResponse(BaseModel):
+    id: int
+    imo_number: str
+    ship_name: str
+    company_name: Optional[str] = None
+    reporting_period: Optional[int] = None
+    cb_status: Optional[str] = None
+    co2_total: Optional[float] = None
+    co2eq_total: Optional[float] = None
+    compliance_doc_number: Optional[str] = None
+    compliance_valid_until: Optional[datetime] = None
+    report_status: Optional[str] = None
+    vr_status: Optional[str] = None
+    verifier_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class UyumlulukListResponse(BaseModel):
+    items: list[UyumlulukItemResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):

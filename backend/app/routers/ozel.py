@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.models import Ship, User, MonitoringPlan, EmissionReport, Verification, ComplianceDocument, UserRole
-from app.schemas.schemas import FilomListResponse, FilomItemResponse, SirketListResponse, SirketItemResponse
+from app.schemas.schemas import (
+    FilomListResponse, FilomItemResponse,
+    SirketListResponse, SirketItemResponse,
+    UyumlulukListResponse, UyumlulukItemResponse,
+)
 from app.auth.auth import get_current_user
 
 router = APIRouter(tags=["Özel"])
@@ -223,6 +227,134 @@ def list_sirketlerim(
     paginated = items[start: start + page_size]
 
     return SirketListResponse(
+        items=paginated,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 1,
+    )
+
+
+@router.get("/api/ozel/uyumluluk", response_model=UyumlulukListResponse)
+def list_uyumluluk(
+    imo_number: Optional[str] = Query(None),
+    ship_name: Optional[str] = Query(None),
+    company: Optional[str] = Query(None),
+    cb_status: Optional[str] = Query(None),
+    report_status: Optional[str] = Query(None),
+    vr_status: Optional[str] = Query(None),
+    reporting_period: Optional[int] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import datetime as dt
+    q = db.query(Ship).options(joinedload(Ship.owner))
+
+    if current_user.role == UserRole.shipping_company:
+        q = q.filter(Ship.owner_id == current_user.id)
+
+    if imo_number:
+        q = q.filter(Ship.imo_number.ilike(f"%{imo_number}%"))
+    if ship_name:
+        q = q.filter(Ship.name.ilike(f"%{ship_name}%"))
+
+    ships = q.order_by(Ship.name).all()
+
+    items: list[UyumlulukItemResponse] = []
+    for ship in ships:
+        owner = ship.owner
+        item_company = owner.company_name if owner else None
+
+        if company and (not item_company or company.lower() not in item_company.lower()):
+            continue
+
+        report_q = db.query(EmissionReport).filter(EmissionReport.ship_id == ship.id)
+        if reporting_period:
+            from sqlalchemy import extract
+            report_q = report_q.filter(
+                extract("year", EmissionReport.reporting_period_start) == reporting_period
+            )
+        latest_report = report_q.order_by(EmissionReport.updated_at.desc()).first()
+
+        item_report_status = latest_report.status.value if latest_report else None
+        if report_status and item_report_status != report_status:
+            continue
+
+        co2_total: Optional[float] = None
+        co2eq_total: Optional[float] = None
+        item_period: Optional[int] = None
+        if latest_report:
+            item_period = latest_report.reporting_period_start.year
+            fc = latest_report.fuel_consumption or {}
+            ghg = latest_report.ghg_emissions or {}
+            if isinstance(ghg, dict):
+                co2_total = float(ghg.get("co2_mt", 0) or 0)
+                co2eq_total = float(ghg.get("total_co2eq_mt", 0) or 0)
+
+        latest_vr = None
+        verifier_name = None
+        item_vr_status = None
+        if latest_report:
+            latest_vr = (
+                db.query(Verification)
+                .options(joinedload(Verification.verifier))
+                .filter(Verification.report_id == latest_report.id)
+                .order_by(Verification.created_at.desc())
+                .first()
+            )
+            if latest_vr:
+                item_vr_status = latest_vr.status.value
+                if latest_vr.verifier:
+                    verifier_name = latest_vr.verifier.full_name
+
+        if vr_status and item_vr_status != vr_status:
+            continue
+
+        latest_doc = (
+            db.query(ComplianceDocument)
+            .filter(ComplianceDocument.ship_id == ship.id)
+            .order_by(ComplianceDocument.created_at.desc())
+            .first()
+        )
+        doc_number = latest_doc.document_number if latest_doc else None
+        doc_valid_until = latest_doc.valid_until if latest_doc else None
+
+        # CB durumu: onaylı rapor + geçerli belge → Uyumlu; aksi → Uyumsuz veya Belirsiz
+        if latest_report and latest_report.status.value == "approved" and latest_doc and latest_doc.valid_until >= dt.utcnow():
+            item_cb = "compliant"
+        elif latest_report and latest_report.status.value in ("submitted", "under_verification"):
+            item_cb = "pending"
+        elif latest_report:
+            item_cb = "non_compliant"
+        else:
+            item_cb = None
+
+        if cb_status and item_cb != cb_status:
+            continue
+
+        items.append(UyumlulukItemResponse(
+            id=ship.id,
+            imo_number=ship.imo_number,
+            ship_name=ship.name,
+            company_name=item_company,
+            reporting_period=item_period,
+            cb_status=item_cb,
+            co2_total=round(co2_total, 2) if co2_total else None,
+            co2eq_total=round(co2eq_total, 2) if co2eq_total else None,
+            compliance_doc_number=doc_number,
+            compliance_valid_until=doc_valid_until,
+            report_status=item_report_status,
+            vr_status=item_vr_status,
+            verifier_name=verifier_name,
+        ))
+
+    total = len(items)
+    start = (page - 1) * page_size
+    paginated = items[start: start + page_size]
+
+    return UyumlulukListResponse(
         items=paginated,
         total=total,
         page=page,

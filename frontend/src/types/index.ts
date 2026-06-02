@@ -176,6 +176,30 @@ export interface SirketList {
   total_pages: number;
 }
 
+export interface UyumlulukItem {
+  id: number;
+  imo_number: string;
+  ship_name: string;
+  company_name?: string;
+  reporting_period?: number;
+  cb_status?: string;
+  co2_total?: number;
+  co2eq_total?: number;
+  compliance_doc_number?: string;
+  compliance_valid_until?: string;
+  report_status?: string;
+  vr_status?: string;
+  verifier_name?: string;
+}
+
+export interface UyumlulukList {
+  items: UyumlulukItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface AuthToken {
   access_token: string;
   token_type: string;
