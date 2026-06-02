@@ -18,7 +18,7 @@ interface NavItem {
 }
 
 const HALK_NAV_ITEMS: NavItem[] = [
-  { href: "/emisyon-raporlari", label: "Emisyon Raporları", icon: FileText, roles: ["shipping_company", "verifier", "ministry"] },
+  { href: "/dashboard/emisyon-raporlari", label: "Emisyon Raporları", icon: FileText, roles: ["shipping_company", "verifier", "ministry"] },
 ];
 
 const OZEL_NAV_ITEMS: NavItem[] = [
