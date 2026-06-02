@@ -126,9 +126,9 @@ export default function EmisyonRaporlariPage() {
     setFiltre((f) => ({ ...f, ship_name: deger }));
     if (deger.length > 1) {
       const q = deger.toLowerCase();
-      const oneriler = [...new Set(
+      const oneriler = Array.from(new Set(
         data.items.map((r) => r.ship_name).filter((n) => n.toLowerCase().includes(q))
-      )].slice(0, 6);
+      )).slice(0, 6);
       setAdOneri(oneriler);
       setOneriGoster(oneriler.length > 0);
     } else {
