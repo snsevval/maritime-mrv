@@ -1,19 +1,18 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import Cookies from "js-cookie";
 
 export default function Home() {
   const router = useRouter();
-
   useEffect(() => {
-    if (isAuthenticated()) {
+    const token = Cookies.get("mrv_token");
+    if (token) {
       router.replace("/dashboard");
     } else {
-      router.replace("/emisyon-raporlari");
+      router.replace("/login");
     }
   }, [router]);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-navy-900">
       <div className="text-white text-center">
