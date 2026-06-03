@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, publicApi } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
     try {
-      await api.post("/api/v1/auth/forgot-password", { email });
+      await publicApi.post("/api/v1/auth/forgot-password", { email });
       setSent(true);
     } catch {
       setError("Bir hata oluştu. Lütfen tekrar deneyin.");

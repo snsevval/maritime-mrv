@@ -5,7 +5,19 @@ import { ozelApi, getErrorMessage } from "@/lib/api";
 import type { SirketItem, SirketList } from "@/types";
 import { cn } from "@/lib/utils";
 
-const BOŞ_FİLTRE = { company: "", cer_status: "", cvr_status: "", reporting_period: "" };
+const BOŞ_FİLTRE = {
+  company: "", cer_status: "", cvr_status: "", reporting_period: "",
+  imo_number: "", country: "", verifier: "", alert: "", attributed_ms: "",
+};
+
+function Satir({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="w-32 text-xs text-gray-600 flex-shrink-0">{label}</label>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
 
 const CER_DURUMLAR = [
   { deger: "valid", etiket: "Geçerli" },
@@ -92,24 +104,36 @@ export default function SirketlerimPage() {
         </div>
         <div className="p-5">
           <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Şirket</label>
-              <input className="input-field text-xs h-8" value={filtre.company} onChange={set("company")} placeholder="Şirket adı" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">CER Durumu</label>
+            <Satir label="IMO Numarası"><input className="input-field text-xs h-8" value={filtre.imo_number} onChange={set("imo_number")} placeholder="IMO numarası" /></Satir>
+            <Satir label="Şirket"><input className="input-field text-xs h-8" value={filtre.company} onChange={set("company")} placeholder="Şirket adı" /></Satir>
+            <Satir label="CER Durumu">
               <select className="input-field text-xs h-8" value={filtre.cer_status} onChange={set("cer_status")}>
                 <option value="">Tümü</option>
                 {CER_DURUMLAR.map((d) => <option key={d.deger} value={d.deger}>{d.etiket}</option>)}
               </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">CVR Durumu</label>
+            </Satir>
+            <Satir label="Uyarı">
+              <select className="input-field text-xs h-8" value={filtre.alert} onChange={set("alert")}>
+                <option value="">Tümü</option>
+                <option value="yes">Var</option>
+                <option value="no">Yok</option>
+              </select>
+            </Satir>
+            <Satir label="Ülke"><input className="input-field text-xs h-8" value={filtre.country} onChange={set("country")} placeholder="Ülke" /></Satir>
+            <Satir label="CVR Durumu">
               <select className="input-field text-xs h-8" value={filtre.cvr_status} onChange={set("cvr_status")}>
                 <option value="">Tümü</option>
                 {CVR_DURUMLAR.map((d) => <option key={d.deger} value={d.deger}>{d.etiket}</option>)}
               </select>
-            </div>
+            </Satir>
+            <Satir label="Doğrulayıcı"><input className="input-field text-xs h-8" value={filtre.verifier} onChange={set("verifier")} placeholder="Doğrulayıcı" /></Satir>
+            <Satir label="MS'ye Atfedilmiş">
+              <select className="input-field text-xs h-8" value={filtre.attributed_ms} onChange={set("attributed_ms")}>
+                <option value="">Tümü</option>
+                <option value="yes">Evet</option>
+                <option value="no">Hayır</option>
+              </select>
+            </Satir>
             <div className="flex items-center gap-2">
               <label className="w-32 text-xs text-gray-600 flex-shrink-0">Raporlama Dönemi</label>
               <select className="input-field text-xs h-8" value={filtre.reporting_period} onChange={set("reporting_period")}>

@@ -6,9 +6,19 @@ import type { UyumlulukItem, UyumlulukList } from "@/types";
 import { cn } from "@/lib/utils";
 
 const BOŞ_FİLTRE = {
-  imo_number: "", ship_name: "", company: "",
+  imo_number: "", ship_name: "", company: "", verifier: "",
   cb_status: "", report_status: "", vr_status: "", reporting_period: "",
+  pool_status: "", fm_type: "", alert: "", penalty: "", in_fleet: "Yes", pool_manager: "",
 };
+
+function Satir({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="w-32 text-xs text-gray-600 flex-shrink-0">{label}</label>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
 
 const CB_DURUMLAR = [
   { deger: "compliant",     etiket: "Uyumlu" },

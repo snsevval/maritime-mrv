@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 const BOŞ_FİLTRE = {
   imo_number: "", ship_name: "", ship_type: "", flag: "",
   company: "", mp_status: "", report_status: "", vr_status: "",
-  gt_min: "", gt_max: "", reporting_period: "",
+  gt_min: "", gt_max: "", reporting_period: "", verifier: "",
+  alert: "", in_fleet: "Yes", feu_rp: "", feu_vr: "", feu_mp: "",
+  doc_status: "", legal_scope: "",
 };
 
 const GEMİ_TÜRLERİ = [
@@ -54,6 +56,15 @@ function durumuCevir(durum?: string | null, tip: "mp" | "rapor" | "vr" = "rapor"
 }
 
 const BOŞ_VERİ: FilomList = { items: [], total: 0, page: 1, page_size: 10, total_pages: 1 };
+
+function Satir({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="w-32 text-xs text-gray-600 flex-shrink-0">{label}</label>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
 
 export default function FilomPage() {
   const [filtre, setFiltre] = useState(BOŞ_FİLTRE);
@@ -124,69 +135,97 @@ export default function FilomPage() {
         </div>
         <div className="p-5">
           <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-            {/* Satır 1 */}
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">IMO Numarası</label>
-              <input className="input-field text-xs h-8" value={filtre.imo_number} onChange={set("imo_number")} placeholder="IMO numarası" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Gemi Adı</label>
-              <input className="input-field text-xs h-8" value={filtre.ship_name} onChange={set("ship_name")} placeholder="Gemi adı" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">MRV Durumu</label>
+            <Satir label="IMO Numarası"><input className="input-field text-xs h-8" value={filtre.imo_number} onChange={set("imo_number")} placeholder="IMO numarası" /></Satir>
+            <Satir label="Gemi Adı"><input className="input-field text-xs h-8" value={filtre.ship_name} onChange={set("ship_name")} placeholder="Gemi adı" /></Satir>
+            <Satir label="MRV ER Durumu">
               <select className="input-field text-xs h-8" value={filtre.report_status} onChange={set("report_status")}>
                 <option value="">Tümü</option>
                 {RAPOR_DURUMLAR.map((d) => <option key={d.deger} value={d.deger}>{d.etiket}</option>)}
               </select>
-            </div>
-            {/* Satır 2 */}
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Gemi Tipi</label>
+            </Satir>
+            <Satir label="Gemi Tipi">
               <select className="input-field text-xs h-8" value={filtre.ship_type} onChange={set("ship_type")}>
                 <option value="">Tümü</option>
                 {GEMİ_TÜRLERİ.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Bayrak</label>
-              <input className="input-field text-xs h-8" value={filtre.flag} onChange={set("flag")} placeholder="Bayrak" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">MRV VR Durumu</label>
+            </Satir>
+            <Satir label="Bayrak"><input className="input-field text-xs h-8" value={filtre.flag} onChange={set("flag")} placeholder="Bayrak" /></Satir>
+            <Satir label="MRV VR Durumu">
               <select className="input-field text-xs h-8" value={filtre.vr_status} onChange={set("vr_status")}>
                 <option value="">Tümü</option>
                 {VR_DURUMLAR.map((d) => <option key={d.deger} value={d.deger}>{d.etiket}</option>)}
               </select>
-            </div>
-            {/* Satır 3 */}
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Şirket</label>
-              <input className="input-field text-xs h-8" value={filtre.company} onChange={set("company")} placeholder="Şirket adı" />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Raporlama Dönemi</label>
-              <select className="input-field text-xs h-8" value={filtre.reporting_period} onChange={set("reporting_period")}>
-                <option value="">Tümü</option>
-                {DÖNEMLER.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">MRV MP Durumu</label>
+            </Satir>
+            <Satir label="Şirket"><input className="input-field text-xs h-8" value={filtre.company} onChange={set("company")} placeholder="Şirket adı" /></Satir>
+            <Satir label="Doğrulayıcı"><input className="input-field text-xs h-8" value={filtre.verifier} onChange={set("verifier")} placeholder="Doğrulayıcı" /></Satir>
+            <Satir label="MRV MP Durumu">
               <select className="input-field text-xs h-8" value={filtre.mp_status} onChange={set("mp_status")}>
                 <option value="">Tümü</option>
                 {MP_DURUMLAR.map((d) => <option key={d.deger} value={d.deger}>{d.etiket}</option>)}
               </select>
-            </div>
-            {/* Satır 4 */}
-            <div className="flex items-center gap-2 col-span-2">
-              <label className="w-32 text-xs text-gray-600 flex-shrink-0">Brüt Tonaj</label>
-              <div className="flex items-center gap-2 flex-1">
+            </Satir>
+            <Satir label="Uyarı">
+              <select className="input-field text-xs h-8" value={filtre.alert} onChange={set("alert")}>
+                <option value="">Tümü</option>
+                <option value="yes">Var</option>
+                <option value="no">Yok</option>
+              </select>
+            </Satir>
+            <Satir label="Filoda">
+              <select className="input-field text-xs h-8" value={filtre.in_fleet} onChange={set("in_fleet")}>
+                <option value="Yes">Evet</option>
+                <option value="No">Hayır</option>
+                <option value="">Tümü</option>
+              </select>
+            </Satir>
+            <Satir label="Brüt Tonaj">
+              <div className="flex items-center gap-1 flex-1">
                 <input className="input-field text-xs h-8" type="number" value={filtre.gt_min} onChange={set("gt_min")} placeholder="İtibaren" />
-                <span className="text-xs text-gray-400">ile</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">ile</span>
                 <input className="input-field text-xs h-8" type="number" value={filtre.gt_max} onChange={set("gt_max")} placeholder="Kadar" />
               </div>
-            </div>
+            </Satir>
+            <Satir label="FEU RP Durumu">
+              <select className="input-field text-xs h-8" value={filtre.feu_rp} onChange={set("feu_rp")}>
+                <option value="">Tümü</option>
+                <option value="compliant">Uyumlu</option>
+                <option value="non_compliant">Uyumsuz</option>
+              </select>
+            </Satir>
+            <Satir label="Raporlama Dönemi">
+              <select className="input-field text-xs h-8" value={filtre.reporting_period} onChange={set("reporting_period")}>
+                <option value="">Tümü</option>
+                {DÖNEMLER.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </Satir>
+            <Satir label="FEU VR Durumu">
+              <select className="input-field text-xs h-8" value={filtre.feu_vr} onChange={set("feu_vr")}>
+                <option value="">Tümü</option>
+                <option value="approved">Onaylandı</option>
+                <option value="pending">Bekliyor</option>
+              </select>
+            </Satir>
+            <Satir label="Belge Durumu">
+              <select className="input-field text-xs h-8" value={filtre.doc_status} onChange={set("doc_status")}>
+                <option value="">Tümü</option>
+                <option value="valid">Geçerli</option>
+                <option value="expired">Süresi Dolmuş</option>
+              </select>
+            </Satir>
+            <Satir label="FEU MP Durumu">
+              <select className="input-field text-xs h-8" value={filtre.feu_mp} onChange={set("feu_mp")}>
+                <option value="">Tümü</option>
+                <option value="active">Aktif</option>
+                <option value="draft">Taslak</option>
+              </select>
+            </Satir>
+            <Satir label="Yasal Kapsam">
+              <select className="input-field text-xs h-8" value={filtre.legal_scope} onChange={set("legal_scope")}>
+                <option value="">Tümü</option>
+                <option value="eu_mrv">AB MRV</option>
+                <option value="imo_dcs">IMO DCS</option>
+              </select>
+            </Satir>
           </div>
 
           <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
