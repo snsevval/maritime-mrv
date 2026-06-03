@@ -6,7 +6,7 @@ const USER_KEY = "mrv_user";
 
 export function setAuth(token: string, user: User): void {
   Cookies.set(TOKEN_KEY, token, { expires: 1, sameSite: "lax" });
-  Cookies.set(USER_KEY, JSON.stringify(user), { expires: 1, sameSite: "lax" });
+  Cookies.set(USER_KEY, JSON.stringify(user), { expires: 1, sameSite: "lax", path: "/" });
 }
 
 export function clearAuth(): void {
