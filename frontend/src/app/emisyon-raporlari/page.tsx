@@ -6,7 +6,7 @@ import { publicApi, getErrorMessage } from "@/lib/api";
 import type { ShipReport, ShipReportList, DatasetVersion } from "@/types";
 import {
   ChevronDown, ChevronLeft, ChevronRight,
-  Download, Eye, RotateCcw, History, Search, Anchor,
+  Download, Eye, RotateCcw, History, Search, 
 } from "lucide-react";
 
 const GEMI_TURLERI = [
@@ -110,12 +110,9 @@ export default function PublicEmisyonRaporlariPage() {
       <header className="bg-navy-900 text-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-navy-700 rounded-lg flex items-center justify-center">
-              <Anchor className="w-5 h-5 text-white" />
-            </div>
             <div>
               <p className="font-bold text-sm leading-tight">TR-MRV Sistemi</p>
-              <p className="text-navy-300 text-xs">GHG Emisyon Raporu</p>
+              <p className="text-white/50 text-xs">GHG Emisyon Raporu</p>
             </div>
           </div>
           <Link href="/login" className="bg-navy-500 hover:bg-navy-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
